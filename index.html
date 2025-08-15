@@ -571,10 +571,7 @@
                 return sampleQuestions;
             }
 
-            // Claude AI API呼び出し
             async callClaudeAPI(memo, apiKey) {
-                // CORS回避のためのプロキシサーバーを使用
-                const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
                 const apiUrl = 'https://api.anthropic.com/v1/messages';
                 
                 const prompt = `以下の授業メモから、15問の1問1答問題を作成してください。
@@ -600,86 +597,39 @@ JSONのみで回答してください（説明文は不要）:
   }
 ]`;
 
-                try {
-                    // 最初に通常のAPI呼び出しを試行
-                    let response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'x-api-key': apiKey,
-                            'anthropic-version': '2023-06-01'
-                        },
-                        body: JSON.stringify({
-                            model: 'claude-3-sonnet-20240229',
-                            max_tokens: 4000,
-                            messages: [
-                                {
-                                    role: 'user',
-                                    content: prompt
-                                }
-                            ]
-                        })
-                    });
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': apiKey,
+                        'anthropic-version': '2023-06-01'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-3-sonnet-20240229',
+                        max_tokens: 4000,
+                        messages: [
+                            {
+                                role: 'user',
+                                content: prompt
+                            }
+                        ]
+                    })
+                });
 
-                    if (!response.ok) {
-                        throw new Error(`Direct API call failed: ${response.status}`);
-                    }
-
-                    const data = await response.json();
-                    return this.parseClaudeResponse(data);
-
-                } catch (directError) {
-                    console.log('Direct API call failed, trying with CORS proxy...');
-                    
-                    // CORS プロキシ経由で再試行
-                    try {
-                        const response = await fetch(proxyUrl + apiUrl, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'x-api-key': apiKey,
-                                'anthropic-version': '2023-06-01',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
-                            body: JSON.stringify({
-                                model: 'claude-3-sonnet-20240229',
-                                max_tokens: 4000,
-                                messages: [
-                                    {
-                                        role: 'user',
-                                        content: prompt
-                                    }
-                                ]
-                            })
-                        });
-
-                        if (!response.ok) {
-                            const errorText = await response.text();
-                            throw new Error(`Proxy API call failed: ${response.status} - ${errorText}`);
-                        }
-
-                        const data = await response.json();
-                        return this.parseClaudeResponse(data);
-
-                    } catch (proxyError) {
-                        console.error('Both direct and proxy API calls failed');
-                        console.error('Direct error:', directError);
-                        console.error('Proxy error:', proxyError);
-                        throw new Error(`API接続に失敗しました。詳細: ${proxyError.message}`);
-                    }
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    throw new Error(`API Error ${response.status}: ${errorData}`);
                 }
-            }
 
-            parseClaudeResponse(data) {
+                const data = await response.json();
                 const content = data.content[0].text;
                 
-                // JSONの抽出（```json ``` で囲まれている場合もある）
+                // JSONの抽出
                 let jsonStr = content;
                 const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
                 if (jsonMatch) {
                     jsonStr = jsonMatch[1];
                 } else {
-                    // [ で始まり ] で終わるJSONを抽出
                     const arrayMatch = content.match(/\[[\s\S]*\]/);
                     if (arrayMatch) {
                         jsonStr = arrayMatch[0];
@@ -693,11 +643,116 @@ JSONのみで回答してください（説明文は不要）:
                     console.error('Response content:', content);
                     throw new Error('Claude APIの応答をJSONとして解析できませんでした');
                 }
-            }Str);
-                } catch (parseError) {
-                    console.error('JSON Parse Error:', parseError);
-                    console.error('Response content:', content);
-                    throw new Error('Claude APIの応答をJSONとして解析できませんでした');
+            }
+
+            generatePrompt() {
+                const memo = document.getElementById('memo-input').value.trim();
+                
+                if (!memo) {
+                    alert('授業メモを入力してください。');
+                    return;
+                }
+
+                const prompt = `以下の授業メモから、15問の1問1答問題を作成してください。
+選択肢問題と穴埋め問題を半々程度で混在させてください。
+選択肢問題は4択で、1つの正解と3つの間違った選択肢を作成してください。
+穴埋め問題は重要なキーワードを答えとしてください。
+
+授業メモ:
+${memo}
+
+必ず以下のJSON形式のみで回答してください（説明文や追加のテキストは一切不要）:
+[
+  {
+    "type": "multiple",
+    "question": "問題文",
+    "options": ["選択肢1", "選択肢2", "選択肢3", "選択肢4"],
+    "correctAnswer": 0
+  },
+  {
+    "type": "fillblank", 
+    "question": "____に入る語句は何ですか？",
+    "correctAnswer": "正解の語句"
+  }
+]`;
+
+                document.getElementById('prompt-text').value = prompt;
+                document.getElementById('prompt-display').classList.remove('hidden');
+                document.getElementById('import-area').classList.add('hidden');
+            }
+
+            copyPrompt() {
+                const promptText = document.getElementById('prompt-text');
+                promptText.select();
+                document.execCommand('copy');
+                alert('プロンプトをコピーしました！Claude AIに貼り付けて実行してください。');
+            }
+
+            showImportArea() {
+                document.getElementById('import-area').classList.remove('hidden');
+                document.getElementById('prompt-display').classList.add('hidden');
+            }
+
+            processImport() {
+                const importText = document.getElementById('import-text').value.trim();
+                
+                if (!importText) {
+                    alert('Claude AIの回答を貼り付けてください。');
+                    return;
+                }
+
+                try {
+                    // JSONの抽出を試行
+                    let jsonStr = importText;
+                    
+                    // コードブロックで囲まれている場合
+                    const jsonMatch = importText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+                    if (jsonMatch) {
+                        jsonStr = jsonMatch[1];
+                    } else {
+                        // [ で始まり ] で終わるJSONを抽出
+                        const arrayMatch = importText.match(/\[[\s\S]*\]/);
+                        if (arrayMatch) {
+                            jsonStr = arrayMatch[0];
+                        }
+                    }
+                    
+                    const questions = JSON.parse(jsonStr);
+                    
+                    // 問題形式の検証
+                    if (!Array.isArray(questions)) {
+                        throw new Error('問題は配列形式である必要があります');
+                    }
+                    
+                    for (const q of questions) {
+                        if (!q.type || !q.question) {
+                            throw new Error('問題にtype, questionが必要です');
+                        }
+                        if (q.type === 'multiple' && (!q.options || !q.hasOwnProperty('correctAnswer'))) {
+                            throw new Error('選択肢問題にはoptions, correctAnswerが必要です');
+                        }
+                        if (q.type === 'fillblank' && !q.correctAnswer) {
+                            throw new Error('穴埋め問題にはcorrectAnswerが必要です');
+                        }
+                    }
+                    
+                    // 既存の問題に追加
+                    this.questions = [...this.questions, ...questions];
+                    this.saveSubjectData();
+                    this.updateUI();
+                    
+                    // UI リセット
+                    document.getElementById('memo-input').value = '';
+                    document.getElementById('import-text').value = '';
+                    document.getElementById('import-area').classList.add('hidden');
+                    document.getElementById('prompt-display').classList.add('hidden');
+                    
+                    alert(`${questions.length}問の問題をインポートしました！`);
+                    
+                } catch (error) {
+                    alert(`インポートエラー: ${error.message}\n\nJSON形式が正しいか確認してください。`);
+                    console.error('Import error:', error);
+                    console.error('Import text:', importText);
                 }
             }
 
@@ -900,7 +955,6 @@ JSONのみで回答してください（説明文は不要）:
 
             showDebugInfo() {
                 const apiKey = localStorage.getItem('anthropic_api_key');
-                const currentSubjectData = this.currentSubject ? localStorage.getItem(`study_app_${this.currentSubject}`) : null;
                 
                 let debug = '=== デバッグ情報 ===\n\n';
                 debug += `現在の科目: ${this.currentSubject || 'なし'}\n`;
@@ -918,117 +972,6 @@ JSONのみで回答してください（説明文は不要）:
                 }
                 
                 alert(debug);
-            }
-
-            generatePrompt() {
-                const memo = document.getElementById('memo-input').value.trim();
-                
-                if (!memo) {
-                    alert('授業メモを入力してください。');
-                    return;
-                }
-
-                const prompt = `以下の授業メモから、15問の1問1答問題を作成してください。
-選択肢問題と穴埋め問題を半々程度で混在させてください。
-選択肢問題は4択で、1つの正解と3つの間違った選択肢を作成してください。
-穴埋め問題は重要なキーワードを答えとしてください。
-
-授業メモ:
-${memo}
-
-必ず以下のJSON形式のみで回答してください（説明文や追加のテキストは一切不要）:
-[
-  {
-    "type": "multiple",
-    "question": "問題文",
-    "options": ["選択肢1", "選択肢2", "選択肢3", "選択肢4"],
-    "correctAnswer": 0
-  },
-  {
-    "type": "fillblank", 
-    "question": "____に入る語句は何ですか？",
-    "correctAnswer": "正解の語句"
-  }
-]`;
-
-                document.getElementById('prompt-text').value = prompt;
-                document.getElementById('prompt-display').classList.remove('hidden');
-                document.getElementById('import-area').classList.add('hidden');
-            }
-
-            copyPrompt() {
-                const promptText = document.getElementById('prompt-text');
-                promptText.select();
-                document.execCommand('copy');
-                alert('プロンプトをコピーしました！Claude AIに貼り付けて実行してください。');
-            }
-
-            showImportArea() {
-                document.getElementById('import-area').classList.remove('hidden');
-                document.getElementById('prompt-display').classList.add('hidden');
-            }
-
-            processImport() {
-                const importText = document.getElementById('import-text').value.trim();
-                
-                if (!importText) {
-                    alert('Claude AIの回答を貼り付けてください。');
-                    return;
-                }
-
-                try {
-                    // JSONの抽出を試行
-                    let jsonStr = importText;
-                    
-                    // コードブロックで囲まれている場合
-                    const jsonMatch = importText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-                    if (jsonMatch) {
-                        jsonStr = jsonMatch[1];
-                    } else {
-                        // [ で始まり ] で終わるJSONを抽出
-                        const arrayMatch = importText.match(/\[[\s\S]*\]/);
-                        if (arrayMatch) {
-                            jsonStr = arrayMatch[0];
-                        }
-                    }
-                    
-                    const questions = JSON.parse(jsonStr);
-                    
-                    // 問題形式の検証
-                    if (!Array.isArray(questions)) {
-                        throw new Error('問題は配列形式である必要があります');
-                    }
-                    
-                    for (const q of questions) {
-                        if (!q.type || !q.question) {
-                            throw new Error('問題にtype, questionが必要です');
-                        }
-                        if (q.type === 'multiple' && (!q.options || !q.hasOwnProperty('correctAnswer'))) {
-                            throw new Error('選択肢問題にはoptions, correctAnswerが必要です');
-                        }
-                        if (q.type === 'fillblank' && !q.correctAnswer) {
-                            throw new Error('穴埋め問題にはcorrectAnswerが必要です');
-                        }
-                    }
-                    
-                    // 既存の問題に追加
-                    this.questions = [...this.questions, ...questions];
-                    this.saveSubjectData();
-                    this.updateUI();
-                    
-                    // UI リセット
-                    document.getElementById('memo-input').value = '';
-                    document.getElementById('import-text').value = '';
-                    document.getElementById('import-area').classList.add('hidden');
-                    document.getElementById('prompt-display').classList.add('hidden');
-                    
-                    alert(`${questions.length}問の問題をインポートしました！`);
-                    
-                } catch (error) {
-                    alert(`インポートエラー: ${error.message}\n\nJSON形式が正しいか確認してください。`);
-                    console.error('Import error:', error);
-                    console.error('Import text:', importText);
-                }
             }
         }
 
