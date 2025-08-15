@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1問1答学習アプリ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .app-header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .app-header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        
+        .subject-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .subject-btn {
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background: #f8f9fa;
+            color: #333;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .subject-btn:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+        }
+        
+        .subject-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #5a67d8;
+        }
+        
+        .input-section {
+            margin: 20px 0;
+        }
+        
+        .input-section label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .memo-input {
+            width: 100%;
+            height: 200px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            resize: vertical;
+            font-family: inherit;
+        }
+        
+        .memo-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .generate-btn, .action-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: background 0.3s ease;
+        }
+        
+        .generate-btn:hover, .action-btn:hover {
+            background: #5a67d8;
+        }
+        
+        .generate-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .quiz-section {
+            display: none;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #667eea;
+            transition: width 0.3s ease;
+        }
+        
+        .question-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .question-text {
+            font-size: 18px;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        
+        .options {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .option-btn {
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .option-btn:hover {
+            border-color: #667eea;
+        }
+        
+        .option-btn.correct {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+        
+        .option-btn.incorrect {
+            background: #f8d7da;
+            border-color: #dc3545;
+        }
+        
+        .fill-blank-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        
+        .score-display {
+            text-align: center;
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #555;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-style: italic;
+        }
+        
+        .management-section {
+            margin-top: 30px;
+            border-top: 2px solid #eee;
+            padding-top: 20px;
+        }
+        
+        .question-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .question-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+        
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            float: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="app-header">
+            <h1>📚 1問1答学習アプリ</h1>
+            <p>効率的なスキマ時間学習で目標達成！</p>
+        </div>
+
+        <div class="card">
+            <h2>科目選択</h2>
+            <div class="subject-selector">
+                <button class="subject-btn" data-subject="decision">意思決定の理論</button>
+                <button class="subject-btn" data-subject="philosophy">公共哲学</button>
+                <button class="subject-btn" data-subject="communication">多言語ITコミュニケーション</button>
+            </div>
+
+            <!-- 問題生成セクション -->
+            <div id="generate-section" class="hidden">
+                <div class="input-section">
+                    <label for="memo-input">授業メモを貼り付けて問題を生成：</label>
+                    <textarea id="memo-input" class="memo-input" placeholder="授業メモをここに貼り付けてください..."></textarea>
+                </div>
+                <button id="generate-questions" class="generate-btn">AIで問題生成 (15問)</button>
+                <div id="loading" class="loading hidden">問題を生成中...</div>
+            </div>
+
+            <!-- 学習セクション -->
+            <div id="study-section" class="hidden">
+                <div class="score-display">
+                    正解率: <span id="score">0</span>/<span id="total">0</span> (<span id="percentage">0</span>%)
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <button id="start-quiz" class="action-btn">学習開始 (15問)</button>
+                <button id="reset-progress" class="action-btn">進捗リセット</button>
+            </div>
+
+            <!-- クイズセクション -->
+            <div id="quiz-section" class="quiz-section">
+                <div class="question-card">
+                    <div class="question-text" id="question-text"></div>
+                    <div id="options-container"></div>
+                    <input type="text" id="fill-blank-input" class="fill-blank-input hidden" placeholder="答えを入力してください">
+                    <button id="submit-answer" class="action-btn hidden">回答</button>
+                    <button id="next-question" class="action-btn hidden">次の問題</button>
+                </div>
+            </div>
+
+            <!-- 問題管理セクション -->
+            <div id="management-section" class="management-section hidden">
+                <h3>問題管理</h3>
+                <p>保存済み問題数: <span id="question-count">0</span></p>
+                <button id="show-questions" class="action-btn">問題一覧表示</button>
+                <button id="clear-subject-data" class="action-btn" style="background: #dc3545;">科目データ削除</button>
+                <div id="question-list" class="question-list hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class StudyApp {
+            constructor() {
+                this.currentSubject = null;
+                this.questions = [];
+                this.currentQuestionIndex = 0;
+                this.score = 0;
+                this.totalQuestions = 0;
+                this.isAnswered = false;
+                
+                this.init();
+            }
+
+            init() {
+                this.bindEvents();
+                this.updateUI();
+            }
+
+            bindEvents() {
+                // 科目選択
+                document.querySelectorAll('.subject-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        this.selectSubject(e.target.dataset.subject);
+                    });
+                });
+
+                // 問題生成
+                document.getElementById('generate-questions').addEventListener('click', () => {
+                    this.generateQuestions();
+                });
+
+                // 学習開始
+                document.getElementById('start-quiz').addEventListener('click', () => {
+                    this.startQuiz();
+                });
+
+                // 回答送信
+                document.getElementById('submit-answer').addEventListener('click', () => {
+                    this.submitAnswer();
+                });
+
+                // 次の問題
+                document.getElementById('next-question').addEventListener('click', () => {
+                    this.nextQuestion();
+                });
+
+                // 進捗リセット
+                document.getElementById('reset-progress').addEventListener('click', () => {
+                    this.resetProgress();
+                });
+
+                // 問題管理
+                document.getElementById('show-questions').addEventListener('click', () => {
+                    this.showQuestionList();
+                });
+
+                document.getElementById('clear-subject-data').addEventListener('click', () => {
+                    this.clearSubjectData();
+                });
+
+                // Enter キーで回答送信
+                document.getElementById('fill-blank-input').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.submitAnswer();
+                    }
+                });
+            }
+
+            selectSubject(subject) {
+                this.currentSubject = subject;
+                
+                // ボタンの状態更新
+                document.querySelectorAll('.subject-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelector(`[data-subject="${subject}"]`).classList.add('active');
+
+                this.loadSubjectData();
+                this.updateUI();
+            }
+
+            loadSubjectData() {
+                const key = `study_app_${this.currentSubject}`;
+                const data = localStorage.getItem(key);
+                
+                if (data) {
+                    const parsed = JSON.parse(data);
+                    this.questions = parsed.questions || [];
+                    this.score = parsed.score || 0;
+                    this.totalQuestions = parsed.totalQuestions || 0;
+                } else {
+                    this.questions = [];
+                    this.score = 0;
+                    this.totalQuestions = 0;
+                }
+            }
+
+            saveSubjectData() {
+                const key = `study_app_${this.currentSubject}`;
+                const data = {
+                    questions: this.questions,
+                    score: this.score,
+                    totalQuestions: this.totalQuestions
+                };
+                localStorage.setItem(key, JSON.stringify(data));
+            }
+
+            updateUI() {
+                if (!this.currentSubject) {
+                    document.getElementById('generate-section').classList.add('hidden');
+                    document.getElementById('study-section').classList.add('hidden');
+                    document.getElementById('management-section').classList.add('hidden');
+                    return;
+                }
+
+                document.getElementById('generate-section').classList.remove('hidden');
+                document.getElementById('management-section').classList.remove('hidden');
+
+                if (this.questions.length > 0) {
+                    document.getElementById('study-section').classList.remove('hidden');
+                    document.getElementById('score').textContent = this.score;
+                    document.getElementById('total').textContent = this.totalQuestions;
+                    const percentage = this.totalQuestions > 0 ? Math.round((this.score / this.totalQuestions) * 100) : 0;
+                    document.getElementById('percentage').textContent = percentage;
+                    
+                    const progress = this.totalQuestions > 0 ? (this.score / this.totalQuestions) * 100 : 0;
+                    document.getElementById('progress-fill').style.width = `${progress}%`;
+                } else {
+                    document.getElementById('study-section').classList.add('hidden');
+                }
+
+                document.getElementById('question-count').textContent = this.questions.length;
+            }
+
+            async generateQuestions() {
+                const memo = document.getElementById('memo-input').value.trim();
+                
+                if (!memo) {
+                    alert('授業メモを入力してください。');
+                    return;
+                }
+
+                document.getElementById('loading').classList.remove('hidden');
+                document.getElementById('generate-questions').disabled = true;
+
+                try {
+                    // 実際の実装では、ここでAI APIを呼び出します
+                    // デモ用にサンプル問題を生成
+                    const sampleQuestions = this.generateSampleQuestions(memo);
+                    
+                    // 実際のAI API呼び出し例:
+                    // const questions = await this.callAIAPI(memo);
+                    
+                    this.questions = sampleQuestions;
+                    this.saveSubjectData();
+                    this.updateUI();
+                    
+                    document.getElementById('memo-input').value = '';
+                    alert('問題を生成しました！');
+                    
+                } catch (error) {
+                    alert('問題生成でエラーが発生しました: ' + error.message);
+                } finally {
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('generate-questions').disabled = false;
+                }
+            }
+
+            generateSampleQuestions(memo) {
+                // AI APIの代わりにサンプル問題を生成（実装時はAI APIに置き換え）
+                const sampleQuestions = [];
+                const words = memo.split(/\s+/).filter(word => word.length > 2);
+                
+                for (let i = 0; i < Math.min(15, words.length); i++) {
+                    const word = words[i];
+                    
+                    if (i % 2 === 0) {
+                        // 選択肢問題
+                        sampleQuestions.push({
+                            type: 'multiple',
+                            question: `「${word}」について正しい説明はどれですか？`,
+                            options: [
+                                `${word}は重要な概念である`,
+                                `${word}は関係のない要素である`,
+                                `${word}は古い理論である`,
+                                `${word}は間違った考え方である`
+                            ],
+                            correctAnswer: 0
+                        });
+                    } else {
+                        // 穴埋め問題
+                        sampleQuestions.push({
+                            type: 'fillblank',
+                            question: `授業で学んだ重要な概念「____」について説明してください。`,
+                            correctAnswer: word
+                        });
+                    }
+                }
+                
+                return sampleQuestions;
+            }
+
+            // AI API呼び出し例（実際に使用する場合）
+            async callAIAPI(memo) {
+                const prompt = `
+以下の授業メモから、15問の1問1答問題を作成してください。
+選択肢問題と穴埋め問題を混在させてください。
+
+授業メモ:
+${memo}
+
+以下のJSON形式で回答してください:
+[
+  {
+    "type": "multiple",
+    "question": "問題文",
+    "options": ["選択肢1", "選択肢2", "選択肢3", "選択肢4"],
+    "correctAnswer": 0
+  },
+  {
+    "type": "fillblank", 
+    "question": "____に入る語句は？",
+    "correctAnswer": "正解"
+  }
+]
+`;
+
+                // ChatGPT APIの例
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer YOUR_API_KEY'
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-3.5-turbo',
+                        messages: [{ role: 'user', content: prompt }],
+                        max_tokens: 2000
+                    })
+                });
+
+                const data = await response.json();
+                return JSON.parse(data.choices[0].message.content);
+            }
+
+            startQuiz() {
+                this.currentQuestionIndex = 0;
+                this.isAnswered = false;
+                
+                document.getElementById('quiz-section').style.display = 'block';
+                this.showQuestion();
+            }
+
+            showQuestion() {
+                if (this.currentQuestionIndex >= this.questions.length) {
+                    this.endQuiz();
+                    return;
+                }
+
+                const question = this.questions[this.currentQuestionIndex];
+                document.getElementById('question-text').textContent = 
+                    `問題 ${this.currentQuestionIndex + 1}/${this.questions.length}: ${question.question}`;
+
+                const optionsContainer = document.getElementById('options-container');
+                const fillBlankInput = document.getElementById('fill-blank-input');
+                const submitBtn = document.getElementById('submit-answer');
+                const nextBtn = document.getElementById('next-question');
+
+                // リセット
+                optionsContainer.innerHTML = '';
+                fillBlankInput.classList.add('hidden');
+                submitBtn.classList.add('hidden');
+                nextBtn.classList.add('hidden');
+                this.isAnswered = false;
+
+                if (question.type === 'multiple') {
+                    // 選択肢問題
+                    question.options.forEach((option, index) => {
+                        const btn = document.createElement('button');
+                        btn.className = 'option-btn';
+                        btn.textContent = option;
+                        btn.addEventListener('click', () => this.selectOption(index, btn));
+                        optionsContainer.appendChild(btn);
+                    });
+                } else if (question.type === 'fillblank') {
+                    // 穴埋め問題
+                    fillBlankInput.classList.remove('hidden');
+                    fillBlankInput.value = '';
+                    submitBtn.classList.remove('hidden');
+                }
+            }
+
+            selectOption(index, btnElement) {
+                if (this.isAnswered) return;
+
+                const question = this.questions[this.currentQuestionIndex];
+                const correct = index === question.correctAnswer;
+
+                // 全ての選択肢ボタンを無効化
+                document.querySelectorAll('.option-btn').forEach(btn => {
+                    btn.style.pointerEvents = 'none';
+                });
+
+                // 正解・不正解の表示
+                if (correct) {
+                    btnElement.classList.add('correct');
+                    this.score++;
+                } else {
+                    btnElement.classList.add('incorrect');
+                    // 正解も表示
+                    document.querySelectorAll('.option-btn')[question.correctAnswer].classList.add('correct');
+                }
+
+                this.totalQuestions++;
+                this.isAnswered = true;
+                this.saveSubjectData();
+                this.updateUI();
+
+                document.getElementById('next-question').classList.remove('hidden');
+            }
+
+            submitAnswer() {
+                if (this.isAnswered) return;
+
+                const userAnswer = document.getElementById('fill-blank-input').value.trim();
+                const question = this.questions[this.currentQuestionIndex];
+
+                if (!userAnswer) {
+                    alert('答えを入力してください。');
+                    return;
+                }
+
+                const correct = userAnswer.toLowerCase() === question.correctAnswer.toLowerCase();
+
+                if (correct) {
+                    alert('正解！');
+                    this.score++;
+                } else {
+                    alert(`不正解。正解は「${question.correctAnswer}」です。`);
+                }
+
+                this.totalQuestions++;
+                this.isAnswered = true;
+                this.saveSubjectData();
+                this.updateUI();
+
+                document.getElementById('submit-answer').classList.add('hidden');
+                document.getElementById('next-question').classList.remove('hidden');
+            }
+
+            nextQuestion() {
+                this.currentQuestionIndex++;
+                this.showQuestion();
+            }
+
+            endQuiz() {
+                document.getElementById('quiz-section').style.display = 'none';
+                const percentage = Math.round((this.score / this.totalQuestions) * 100);
+                alert(`学習完了！正解率: ${percentage}%`);
+            }
+
+            resetProgress() {
+                if (confirm('進捗をリセットしますか？')) {
+                    this.score = 0;
+                    this.totalQuestions = 0;
+                    this.saveSubjectData();
+                    this.updateUI();
+                }
+            }
+
+            showQuestionList() {
+                const listElement = document.getElementById('question-list');
+                
+                if (listElement.classList.contains('hidden')) {
+                    listElement.innerHTML = '';
+                    this.questions.forEach((q, index) => {
+                        const item = document.createElement('div');
+                        item.className = 'question-item';
+                        item.innerHTML = `
+                            <strong>Q${index + 1}:</strong> ${q.question}
+                            <button class="delete-btn" onclick="app.deleteQuestion(${index})">削除</button>
+                        `;
+                        listElement.appendChild(item);
+                    });
+                    listElement.classList.remove('hidden');
+                } else {
+                    listElement.classList.add('hidden');
+                }
+            }
+
+            deleteQuestion(index) {
+                if (confirm('この問題を削除しますか？')) {
+                    this.questions.splice(index, 1);
+                    this.saveSubjectData();
+                    this.updateUI();
+                    this.showQuestionList();
+                }
+            }
+
+            clearSubjectData() {
+                if (confirm(`${this.currentSubject}のデータを全て削除しますか？`)) {
+                    const key = `study_app_${this.currentSubject}`;
+                    localStorage.removeItem(key);
+                    this.questions = [];
+                    this.score = 0;
+                    this.totalQuestions = 0;
+                    this.updateUI();
+                    document.getElementById('question-list').classList.add('hidden');
+                }
+            }
+        }
+
+        // アプリ初期化
+        const app = new StudyApp();
+    </script>
+</body>
+</html>
