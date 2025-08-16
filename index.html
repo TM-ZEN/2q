@@ -317,12 +317,43 @@
                 <button id="clear-subject-data" class="action-btn" style="background: #dc3545;">科目データ削除</button>
                 <button id="manage-api-key" class="action-btn" style="background: #6c757d;">APIキー管理</button>
                 <button id="debug-info" class="action-btn" style="background: #17a2b8;">デバッグ情報</button>
+                
+                <!-- データ移行セクション -->
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
+                    <h4>📱 デバイス間データ移行</h4>
+                    <button id="export-data" class="action-btn" style="background: #28a745;">データエクスポート</button>
+                    <button id="import-data" class="action-btn" style="background: #fd7e14;">データインポート</button>
+                    <button id="cloud-sync" class="action-btn" style="background: #17a2b8;">☁️ クラウド同期</button>
+                </div>
+                
+                <!-- インポートエリア -->
+                <div id="data-import-area" class="hidden" style="margin-top: 15px;">
+                    <label>エクスポートしたデータを貼り付けてください：</label>
+                    <textarea id="import-data-text" class="memo-input" style="height: 100px;" placeholder="エクスポートしたデータをここに貼り付けてください..."></textarea>
+                    <button id="process-data-import" class="action-btn">データをインポート</button>
+                </div>
                 <div id="question-list" class="question-list hidden"></div>
             </div>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // Supabase設定
+        const SUPABASE_URL = 'https://zayngisercbordbjzats.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpheW5naXNlcmNib3JkYmp6YXRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzMTY4NzEsImV4cCI6MjA3MDg5Mjg3MX0.kRO52pBNwowL2AVdAvan2Kz8xwARrWe-52HdDTK9Qbs'; // 実際のキーに置き換えてください
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // ユーザーID生成（ブラウザ固有）
+        function getUserId() {
+            let userId = localStorage.getItem('study_app_user_id');
+            if (!userId) {
+                userId = 'user_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+                localStorage.setItem('study_app_user_id', userId);
+            }
+            return userId;
+        }
+
         class StudyApp {
             constructor() {
                 this.currentSubject = null;
@@ -412,6 +443,26 @@
                     this.showDebugInfo();
                 });
 
+                // データエクスポート
+                document.getElementById('export-data').addEventListener('click', () => {
+                    this.exportData();
+                });
+
+                // データインポート
+                document.getElementById('import-data').addEventListener('click', () => {
+                    this.showDataImportArea();
+                });
+
+                // データインポート処理
+                document.getElementById('process-data-import').addEventListener('click', () => {
+                    this.processDataImport();
+                });
+
+                // クラウド同期
+                document.getElementById('cloud-sync').addEventListener('click', () => {
+                    this.cloudSync();
+                });
+
                 // Enter キーで回答送信
                 document.getElementById('fill-blank-input').addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
@@ -457,6 +508,11 @@
                     totalQuestions: this.totalQuestions
                 };
                 localStorage.setItem(key, JSON.stringify(data));
+                
+                // Supabaseにも保存（バックグラウンド）
+                this.saveToSupabase().catch(error => {
+                    console.log('Supabase保存エラー（ローカル保存は成功）:', error);
+                });
             }
 
             updateUI() {
@@ -972,6 +1028,168 @@ ${memo}
                 }
                 
                 alert(debug);
+            }
+
+            // Supabase関連メソッド
+            async saveToSupabase() {
+                const userId = getUserId();
+                const data = {
+                    user_id: userId,
+                    subject: this.currentSubject,
+                    questions: this.questions,
+                    score: this.score,
+                    total_questions: this.totalQuestions,
+                    updated_at: new Date().toISOString()
+                };
+
+                const { error } = await supabase
+                    .from('study_data')
+                    .upsert(data, { onConflict: 'user_id,subject' });
+
+                if (error) throw error;
+            }
+
+            async loadFromSupabase() {
+                const userId = getUserId();
+                
+                const { data, error } = await supabase
+                    .from('study_data')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .eq('subject', this.currentSubject)
+                    .single();
+
+                if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found
+                
+                if (data) {
+                    this.questions = data.questions || [];
+                    this.score = data.score || 0;
+                    this.totalQuestions = data.total_questions || 0;
+                    return true;
+                }
+                return false;
+            }
+
+            async cloudSync() {
+                try {
+                    const button = document.getElementById('cloud-sync');
+                    button.disabled = true;
+                    button.textContent = '同期中...';
+
+                    // 現在の科目を Supabase に保存
+                    if (this.currentSubject) {
+                        await this.saveToSupabase();
+                    }
+
+                    // 全科目を Supabase から読み込み
+                    const userId = getUserId();
+                    const { data, error } = await supabase
+                        .from('study_data')
+                        .select('*')
+                        .eq('user_id', userId);
+
+                    if (error) throw error;
+
+                    // LocalStorage に保存
+                    data.forEach(item => {
+                        const key = `study_app_${item.subject}`;
+                        const localData = {
+                            questions: item.questions || [],
+                            score: item.score || 0,
+                            totalQuestions: item.total_questions || 0
+                        };
+                        localStorage.setItem(key, JSON.stringify(localData));
+                    });
+
+                    // 現在の科目データを再読み込み
+                    if (this.currentSubject) {
+                        this.loadSubjectData();
+                        this.updateUI();
+                    }
+
+                    alert(`クラウド同期完了！${data.length}科目のデータを同期しました。`);
+
+                } catch (error) {
+                    console.error('同期エラー:', error);
+                    alert('同期でエラーが発生しました: ' + error.message);
+                } finally {
+                    const button = document.getElementById('cloud-sync');
+                    button.disabled = false;
+                    button.textContent = '☁️ クラウド同期';
+                }
+            }
+
+            exportData() {
+                const allData = {
+                    exportDate: new Date().toISOString().split('T')[0],
+                    userId: getUserId(),
+                    subjects: {}
+                };
+
+                ['decision', 'philosophy', 'communication'].forEach(subject => {
+                    const key = `study_app_${subject}`;
+                    const data = localStorage.getItem(key);
+                    if (data) {
+                        allData.subjects[subject] = JSON.parse(data);
+                    }
+                });
+
+                const jsonStr = JSON.stringify(allData, null, 2);
+                
+                // クリップボードにコピー
+                navigator.clipboard.writeText(jsonStr).then(() => {
+                    alert('データをクリップボードにコピーしました！他のデバイスで「データインポート」に貼り付けてください。');
+                }).catch(() => {
+                    // フォールバック：テキストエリアに表示
+                    const textarea = document.createElement('textarea');
+                    textarea.value = jsonStr;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    alert('データをコピーしました！他のデバイスで「データインポート」に貼り付けてください。');
+                });
+            }
+
+            showDataImportArea() {
+                document.getElementById('data-import-area').classList.remove('hidden');
+            }
+
+            processDataImport() {
+                const importText = document.getElementById('import-data-text').value.trim();
+                
+                if (!importText) {
+                    alert('エクスポートしたデータを貼り付けてください。');
+                    return;
+                }
+
+                try {
+                    const data = JSON.parse(importText);
+                    
+                    if (!data.subjects) {
+                        throw new Error('無効なデータ形式です');
+                    }
+
+                    // LocalStorageに保存
+                    Object.entries(data.subjects).forEach(([subject, subjectData]) => {
+                        const key = `study_app_${subject}`;
+                        localStorage.setItem(key, JSON.stringify(subjectData));
+                    });
+
+                    // 現在の科目データを再読み込み
+                    if (this.currentSubject) {
+                        this.loadSubjectData();
+                        this.updateUI();
+                    }
+
+                    document.getElementById('import-data-text').value = '';
+                    document.getElementById('data-import-area').classList.add('hidden');
+                    
+                    alert(`データインポート完了！${Object.keys(data.subjects).length}科目のデータをインポートしました。`);
+                    
+                } catch (error) {
+                    alert(`インポートエラー: ${error.message}`);
+                }
             }
         }
 
