@@ -526,6 +526,16 @@
                     this.setUserId();
                 });
 
+                // クラウド保存
+                document.getElementById('save-to-cloud').addEventListener('click', () => {
+                    this.saveToCloud();
+                });
+
+                // クラウド読み込み
+                document.getElementById('load-from-cloud').addEventListener('click', () => {
+                    this.loadFromCloud();
+                });
+
                 // Enter キーで回答送信
                 document.getElementById('fill-blank-input').addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
