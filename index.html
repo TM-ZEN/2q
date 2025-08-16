@@ -60,6 +60,8 @@
             cursor: pointer;
             transition: all 0.3s ease;
             border: 2px solid transparent;
+            min-height: 60px;
+            word-wrap: break-word;
         }
         
         .subject-btn:hover {
@@ -71,6 +73,55 @@
             background: #667eea;
             color: white;
             border-color: #5a67d8;
+        }
+        
+        /* モバイル対応 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .app-header h1 {
+                font-size: 2em;
+            }
+            
+            .subject-selector {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .subject-btn {
+                font-size: 18px;
+                padding: 20px;
+                min-height: 70px;
+            }
+            
+            .generate-btn, .action-btn {
+                font-size: 14px;
+                padding: 10px 15px;
+                margin: 5px 2px;
+                display: block;
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            
+            .memo-input {
+                font-size: 16px;
+            }
+            
+            .question-text {
+                font-size: 16px;
+            }
+            
+            .option-btn {
+                font-size: 14px;
+                padding: 12px;
+            }
+            
+            .card {
+                padding: 20px;
+                margin-bottom: 15px;
+            }
         }
         
         .input-section {
@@ -1016,7 +1067,14 @@ ${memo}
                 debug += `現在の科目: ${this.currentSubject || 'なし'}\n`;
                 debug += `APIキー: ${apiKey ? `設定済み (${apiKey.substring(0, 10)}...)` : '未設定'}\n`;
                 debug += `問題数: ${this.questions.length}\n`;
-                debug += `正解/総問題: ${this.score}/${this.totalQuestions}\n\n`;
+                debug += `正解/総問題: ${this.score}/${this.totalQuestions}\n`;
+                debug += `画面幅: ${window.innerWidth}px\n`;
+                debug += `ユーザーエージェント: ${navigator.userAgent.includes('Mobile') ? 'モバイル' : 'デスクトップ'}\n\n`;
+                
+                debug += '=== UI表示状態 ===\n';
+                debug += `generate-section: ${document.getElementById('generate-section').classList.contains('hidden') ? '非表示' : '表示'}\n`;
+                debug += `study-section: ${document.getElementById('study-section').classList.contains('hidden') ? '非表示' : '表示'}\n`;
+                debug += `management-section: ${document.getElementById('management-section').classList.contains('hidden') ? '非表示' : '表示'}\n\n`;
                 
                 debug += '=== LocalStorage内容 ===\n';
                 for (let i = 0; i < localStorage.length; i++) {
