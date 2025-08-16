@@ -581,11 +581,6 @@
                     totalQuestions: this.totalQuestions
                 };
                 localStorage.setItem(key, JSON.stringify(data));
-                
-                // Supabaseにも保存（バックグラウンド）
-                this.saveToSupabase().catch(error => {
-                    console.log('Supabase保存エラー（ローカル保存は成功）:', error);
-                });
             }
 
             updateUI() {
