@@ -372,6 +372,17 @@
                 <!-- データ移行セクション -->
                 <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
                     <h4>📱 デバイス間データ移行</h4>
+                    <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                        <label style="font-weight: bold; margin-bottom: 5px; display: block;">ユーザーID:</label>
+                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                            <input type="text" id="user-id-input" placeholder="共有用のユーザーIDを入力" style="flex: 1; min-width: 200px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <button id="set-user-id" class="action-btn" style="background: #6f42c1;">ID設定</button>
+                        </div>
+                        <small style="color: #666; margin-top: 5px; display: block;">
+                            現在のID: <span id="current-user-id">未設定</span>
+                        </small>
+                    </div>
+                    
                     <button id="export-data" class="action-btn" style="background: #28a745;">データエクスポート</button>
                     <button id="import-data" class="action-btn" style="background: #fd7e14;">データインポート</button>
                     <button id="cloud-sync" class="action-btn" style="background: #17a2b8;">☁️ クラウド同期</button>
@@ -514,6 +525,11 @@
                     this.cloudSync();
                 });
 
+                // ユーザーID設定
+                document.getElementById('set-user-id').addEventListener('click', () => {
+                    this.setUserId();
+                });
+
                 // Enter キーで回答送信
                 document.getElementById('fill-blank-input').addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
@@ -591,6 +607,14 @@
                 }
 
                 document.getElementById('question-count').textContent = this.questions.length;
+                
+                // ユーザーID表示更新
+                this.updateUserIdDisplay();
+            }
+
+            updateUserIdDisplay() {
+                const currentUserId = getUserId();
+                document.getElementById('current-user-id').textContent = currentUserId;
             }
 
             async generateQuestions() {
@@ -1248,6 +1272,41 @@ ${memo}
                 } catch (error) {
                     alert(`インポートエラー: ${error.message}`);
                 }
+            }
+
+            setUserId() {
+                const newUserId = document.getElementById('user-id-input').value.trim();
+                
+                if (!newUserId) {
+                    alert('ユーザーIDを入力してください。');
+                    return;
+                }
+
+                // ID形式の簡単な検証
+                if (newUserId.length < 3) {
+                    alert('ユーザーIDは3文字以上で入力してください。');
+                    return;
+                }
+
+                if (!/^[a-zA-Z0-9_-]+$/.test(newUserId)) {
+                    alert('ユーザーIDは英数字、ハイフン、アンダースコアのみ使用できます。');
+                    return;
+                }
+
+                const currentUserId = localStorage.getItem('study_app_user_id');
+                
+                if (currentUserId && currentUserId !== newUserId) {
+                    if (!confirm(`現在のユーザーID「${currentUserId}」を「${newUserId}」に変更しますか？\n\n注意: 変更後はクラウド同期でデータを再取得する必要があります。`)) {
+                        return;
+                    }
+                }
+
+                // ユーザーID設定
+                localStorage.setItem('study_app_user_id', newUserId);
+                this.updateUserIdDisplay();
+                document.getElementById('user-id-input').value = '';
+
+                alert(`ユーザーIDを「${newUserId}」に設定しました！\n\n他のデバイスでも同じIDを設定してクラウド同期を行ってください。`);
             }
         }
 
