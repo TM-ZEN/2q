@@ -383,9 +383,10 @@
                         </small>
                     </div>
                     
-                    <button id="export-data" class="action-btn" style="background: #28a745;">データエクスポート</button>
-                    <button id="import-data" class="action-btn" style="background: #fd7e14;">データインポート</button>
-                    <button id="cloud-sync" class="action-btn" style="background: #17a2b8;">☁️ クラウド同期</button>
+                    <button id="export-data" class="action-btn" style="background: #28a745;">📋 データエクスポート</button>
+                    <button id="import-data" class="action-btn" style="background: #fd7e14;">📋 データインポート</button>
+                    <button id="save-to-cloud" class="action-btn" style="background: #007bff;">📤 クラウドに保存</button>
+                    <button id="load-from-cloud" class="action-btn" style="background: #17a2b8;">📥 クラウドから読み込み</button>
                 </div>
                 
                 <!-- インポートエリア -->
@@ -1198,6 +1199,104 @@ ${memo}
                     const button = document.getElementById('cloud-sync');
                     button.disabled = false;
                     button.textContent = '☁️ クラウド同期';
+                }
+            }
+
+            async saveToCloud() {
+                try {
+                    const button = document.getElementById('save-to-cloud');
+                    button.disabled = true;
+                    button.textContent = '保存中...';
+
+                    const userId = getUserId();
+                    let savedCount = 0;
+
+                    // 全科目のデータをクラウドに保存
+                    for (const subject of ['decision', 'philosophy', 'communication']) {
+                        const key = `study_app_${subject}`;
+                        const localData = localStorage.getItem(key);
+                        
+                        if (localData) {
+                            const parsedData = JSON.parse(localData);
+                            
+                            // 問題が存在する場合のみ保存
+                            if (parsedData.questions && parsedData.questions.length > 0) {
+                                const data = {
+                                    user_id: userId,
+                                    subject: subject,
+                                    questions: parsedData.questions,
+                                    score: parsedData.score || 0,
+                                    total_questions: parsedData.totalQuestions || 0,
+                                    updated_at: new Date().toISOString()
+                                };
+
+                                const { error } = await supabase
+                                    .from('study_data')
+                                    .upsert(data, { onConflict: 'user_id,subject' });
+
+                                if (error) throw error;
+                                savedCount++;
+                            }
+                        }
+                    }
+
+                    alert(`クラウド保存完了！${savedCount}科目のデータを保存しました。`);
+
+                } catch (error) {
+                    console.error('保存エラー:', error);
+                    alert('保存でエラーが発生しました: ' + error.message);
+                } finally {
+                    const button = document.getElementById('save-to-cloud');
+                    button.disabled = false;
+                    button.textContent = '📤 クラウドに保存';
+                }
+            }
+
+            async loadFromCloud() {
+                try {
+                    const button = document.getElementById('load-from-cloud');
+                    button.disabled = true;
+                    button.textContent = '読み込み中...';
+
+                    const userId = getUserId();
+                    const { data, error } = await supabase
+                        .from('study_data')
+                        .select('*')
+                        .eq('user_id', userId);
+
+                    if (error) throw error;
+
+                    if (data.length === 0) {
+                        alert('クラウドにデータが見つかりませんでした。\n\n先に他のデバイスで「📤 クラウドに保存」を実行してください。');
+                        return;
+                    }
+
+                    // LocalStorage に保存
+                    data.forEach(item => {
+                        const key = `study_app_${item.subject}`;
+                        const localData = {
+                            questions: item.questions || [],
+                            score: item.score || 0,
+                            totalQuestions: item.total_questions || 0
+                        };
+                        localStorage.setItem(key, JSON.stringify(localData));
+                    });
+
+                    // 現在の科目データを再読み込み
+                    if (this.currentSubject) {
+                        this.loadSubjectData();
+                        this.updateUI();
+                    }
+
+                    alert(`クラウド読み込み完了！${data.length}科目のデータを読み込みました。\n\n科目を選択して学習を開始してください。`);
+
+                } catch (error) {
+                    console.error('読み込みエラー:', error);
+                    alert('読み込みでエラーが発生しました: ' + error.message);
+                } finally {
+                    const button = document.getElementById('load-from-cloud');
+                    button.disabled = false;
+                    button.textContent = '📥 クラウドから読み込み';
                 }
             }
 
