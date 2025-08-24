@@ -1172,9 +1172,8 @@ ${memo}
                             throw new Error('穴埋め問題にはcorrectAnswerが必要です');
                         }
                     }
-                    
                     // チャプターデータとして保存
-                    this.saveChapterData(chapterName, questions).then(() => {
+                    this.saveChapterData(chapterName, questions).then((result) => {
                         // チャプター一覧を再読み込み
                         this.loadChaptersForSubject(this.currentSubject);
                         
@@ -1185,7 +1184,7 @@ ${memo}
                         document.getElementById('import-area').classList.add('hidden');
                         document.getElementById('prompt-display').classList.add('hidden');
                         
-                        alert(`チャプター「${chapterName}」に${questions.length}問の問題をインポートしました！`);
+                        alert(result.message);
                     });
                     
                 } catch (error) {
