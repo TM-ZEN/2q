@@ -75,6 +75,51 @@
             border-color: #5a67d8;
         }
         
+        .chapter-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .chapter-btn {
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: #f8f9fa;
+            color: #333;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .chapter-btn:hover {
+            border-color: #667eea;
+            background: #e9ecef;
+        }
+        
+        .chapter-btn.selected {
+            background: #667eea;
+            color: white;
+            border-color: #5a67d8;
+        }
+        
+        .chapter-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .chapter-btn.selected .chapter-info {
+            color: #e0e6ff;
+        }
+        
         /* モバイル対応 */
         @media (max-width: 768px) {
             .container {
@@ -94,6 +139,10 @@
                 font-size: 18px;
                 padding: 20px;
                 min-height: 70px;
+            }
+            
+            .chapter-selector {
+                grid-template-columns: 1fr;
             }
             
             .generate-btn, .action-btn {
@@ -300,15 +349,35 @@
         </div>
 
         <div class="card">
-            <h2>科目選択</h2>
+            <h2>学習設定</h2>
+            
+            <!-- 科目選択 -->
+            <h3>科目を選択してください</h3>
             <div class="subject-selector">
                 <button class="subject-btn" data-subject="decision">意思決定の理論</button>
                 <button class="subject-btn" data-subject="philosophy">公共哲学</button>
                 <button class="subject-btn" data-subject="communication">多言語ITコミュニケーション</button>
             </div>
 
+            <!-- チャプター選択 -->
+            <div id="chapter-section" class="hidden" style="margin-top: 20px;">
+                <h3>学習するチャプターを選択してください（複数選択可）</h3>
+                <div id="chapter-selector" class="chapter-selector">
+                    <!-- チャプターボタンが動的に追加される -->
+                </div>
+                <div style="margin-top: 15px;">
+                    <button id="select-all-chapters" class="action-btn" style="background: #28a745;">すべて選択</button>
+                    <button id="deselect-all-chapters" class="action-btn" style="background: #dc3545;">選択解除</button>
+                </div>
+            </div>
+
             <!-- 問題生成セクション -->
             <div id="generate-section" class="hidden">
+                <h3>問題生成</h3>
+                <div class="input-section">
+                    <label for="chapter-name-input">チャプター名:</label>
+                    <input type="text" id="chapter-name-input" class="memo-input" style="height: 40px;" placeholder="例: 第1章 意思決定の基礎理論">
+                </div>
                 <div class="input-section">
                     <label for="memo-input">授業メモを貼り付けて問題を生成：</label>
                     <textarea id="memo-input" class="memo-input" placeholder="授業メモをここに貼り付けてください..."></textarea>
@@ -406,6 +475,29 @@
         const SUPABASE_URL = 'https://zayngisercbordbjzats.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpheW5naXNlcmNib3JkYmp6YXRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzMTY4NzEsImV4cCI6MjA3MDg5Mjg3MX0.kRO52pBNwowL2AVdAvan2Kz8xwARrWe-52HdDTK9Qbs'; // 実際のキーに置き換えてください
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // テーブル構造を新しいものに更新
+        async function updateTableStructure() {
+            try {
+                // チャプター列を追加（存在しない場合のみ）
+                await supabase.rpc('exec', { 
+                    sql: `
+                        ALTER TABLE study_data 
+                        ADD COLUMN IF NOT EXISTS chapter text;
+                        
+                        -- 複合ユニーク制約を更新
+                        DROP INDEX IF EXISTS study_data_user_id_subject_key;
+                        CREATE UNIQUE INDEX IF NOT EXISTS study_data_user_id_subject_chapter_key 
+                        ON study_data(user_id, subject, chapter);
+                    `
+                });
+            } catch (error) {
+                console.log('テーブル更新済みまたはエラー:', error);
+            }
+        }
+        
+        // 初回実行
+        updateTableStructure();
         
         // ユーザーID生成（ブラウザ固有）
         function getUserId() {
@@ -420,6 +512,8 @@
         class StudyApp {
             constructor() {
                 this.currentSubject = null;
+                this.selectedChapters = []; // 選択されたチャプター
+                this.allChapters = {}; // 科目ごとのチャプター情報
                 this.questions = [];
                 this.currentQuestionIndex = 0;
                 this.score = 0;
@@ -440,6 +534,15 @@
                     btn.addEventListener('click', (e) => {
                         this.selectSubject(e.target.dataset.subject);
                     });
+                });
+
+                // チャプター全選択/解除
+                document.getElementById('select-all-chapters').addEventListener('click', () => {
+                    this.selectAllChapters();
+                });
+
+                document.getElementById('deselect-all-chapters').addEventListener('click', () => {
+                    this.deselectAllChapters();
                 });
 
                 // 問題生成
@@ -546,6 +649,7 @@
 
             selectSubject(subject) {
                 this.currentSubject = subject;
+                this.selectedChapters = []; // チャプター選択をリセット
                 
                 // ボタンの状態更新
                 document.querySelectorAll('.subject-btn').forEach(btn => {
@@ -553,34 +657,154 @@
                 });
                 document.querySelector(`[data-subject="${subject}"]`).classList.add('active');
 
-                this.loadSubjectData();
+                this.loadChaptersForSubject(subject);
                 this.updateUI();
             }
 
-            loadSubjectData() {
-                const key = `study_app_${this.currentSubject}`;
-                const data = localStorage.getItem(key);
-                
-                if (data) {
-                    const parsed = JSON.parse(data);
-                    this.questions = parsed.questions || [];
-                    this.score = parsed.score || 0;
-                    this.totalQuestions = parsed.totalQuestions || 0;
-                } else {
-                    this.questions = [];
-                    this.score = 0;
-                    this.totalQuestions = 0;
+            async loadChaptersForSubject(subject) {
+                try {
+                    // Supabaseから該当科目のチャプター一覧を取得
+                    const userId = getUserId();
+                    const { data, error } = await supabase
+                        .from('study_data')
+                        .select('chapter, questions, score, total_questions')
+                        .eq('user_id', userId)
+                        .eq('subject', subject)
+                        .not('chapter', 'is', null);
+
+                    if (error) throw error;
+
+                    // チャプター情報を整理
+                    this.allChapters[subject] = data || [];
+                    this.displayChapterSelector();
+                    
+                } catch (error) {
+                    console.error('チャプター読み込みエラー:', error);
+                    this.allChapters[subject] = [];
+                    this.displayChapterSelector();
                 }
             }
 
-            saveSubjectData() {
-                const key = `study_app_${this.currentSubject}`;
-                const data = {
-                    questions: this.questions,
-                    score: this.score,
-                    totalQuestions: this.totalQuestions
-                };
-                localStorage.setItem(key, JSON.stringify(data));
+            displayChapterSelector() {
+                const chapterSection = document.getElementById('chapter-section');
+                const chapterSelector = document.getElementById('chapter-selector');
+                
+                if (!this.currentSubject) {
+                    chapterSection.classList.add('hidden');
+                    return;
+                }
+
+                const chapters = this.allChapters[this.currentSubject] || [];
+                
+                if (chapters.length === 0) {
+                    chapterSection.classList.add('hidden');
+                    return;
+                }
+
+                chapterSection.classList.remove('hidden');
+                chapterSelector.innerHTML = '';
+
+                chapters.forEach(chapterData => {
+                    const btn = document.createElement('button');
+                    btn.className = 'chapter-btn';
+                    btn.dataset.chapter = chapterData.chapter;
+                    
+                    const questionCount = chapterData.questions ? chapterData.questions.length : 0;
+                    const score = chapterData.score || 0;
+                    const total = chapterData.total_questions || 0;
+                    const percentage = total > 0 ? Math.round((score / total) * 100) : 0;
+                    
+                    btn.innerHTML = `
+                        <div style="font-weight: bold;">${chapterData.chapter}</div>
+                        <div class="chapter-info">問題数: ${questionCount} | 正解率: ${percentage}%</div>
+                    `;
+                    
+                    btn.addEventListener('click', () => {
+                        this.toggleChapter(chapterData.chapter);
+                    });
+                    
+                    chapterSelector.appendChild(btn);
+                });
+            }
+
+            toggleChapter(chapter) {
+                const index = this.selectedChapters.indexOf(chapter);
+                if (index > -1) {
+                    this.selectedChapters.splice(index, 1);
+                } else {
+                    this.selectedChapters.push(chapter);
+                }
+                
+                this.updateChapterButtonStates();
+                this.loadSelectedChaptersData();
+                this.updateUI();
+            }
+
+            selectAllChapters() {
+                const chapters = this.allChapters[this.currentSubject] || [];
+                this.selectedChapters = chapters.map(c => c.chapter);
+                this.updateChapterButtonStates();
+                this.loadSelectedChaptersData();
+                this.updateUI();
+            }
+
+            deselectAllChapters() {
+                this.selectedChapters = [];
+                this.updateChapterButtonStates();
+                this.loadSelectedChaptersData();
+                this.updateUI();
+            }
+
+            updateChapterButtonStates() {
+                document.querySelectorAll('.chapter-btn').forEach(btn => {
+                    if (this.selectedChapters.includes(btn.dataset.chapter)) {
+                        btn.classList.add('selected');
+                    } else {
+                        btn.classList.remove('selected');
+                    }
+                });
+            }
+
+            async loadSelectedChaptersData() {
+                if (this.selectedChapters.length === 0) {
+                    this.questions = [];
+                    this.score = 0;
+                    this.totalQuestions = 0;
+                    return;
+                }
+
+                try {
+                    const userId = getUserId();
+                    const { data, error } = await supabase
+                        .from('study_data')
+                        .select('*')
+                        .eq('user_id', userId)
+                        .eq('subject', this.currentSubject)
+                        .in('chapter', this.selectedChapters);
+
+                    if (error) throw error;
+
+                    // 選択されたチャプターの問題を統合
+                    this.questions = [];
+                    this.score = 0;
+                    this.totalQuestions = 0;
+
+                    data.forEach(chapterData => {
+                        if (chapterData.questions && chapterData.questions.length > 0) {
+                            // 各問題にチャプター情報を追加
+                            const questionsWithChapter = chapterData.questions.map(q => ({
+                                ...q,
+                                chapter: chapterData.chapter
+                            }));
+                            this.questions = [...this.questions, ...questionsWithChapter];
+                        }
+                        this.score += chapterData.score || 0;
+                        this.totalQuestions += chapterData.total_questions || 0;
+                    });
+
+                } catch (error) {
+                    console.error('チャプターデータ読み込みエラー:', error);
+                }
             }
 
             updateUI() {
@@ -588,13 +812,14 @@
                     document.getElementById('generate-section').classList.add('hidden');
                     document.getElementById('study-section').classList.add('hidden');
                     document.getElementById('management-section').classList.add('hidden');
+                    document.getElementById('chapter-section').classList.add('hidden');
                     return;
                 }
 
                 document.getElementById('generate-section').classList.remove('hidden');
                 document.getElementById('management-section').classList.remove('hidden');
 
-                if (this.questions.length > 0) {
+                if (this.selectedChapters.length > 0 && this.questions.length > 0) {
                     document.getElementById('study-section').classList.remove('hidden');
                     document.getElementById('score').textContent = this.score;
                     document.getElementById('total').textContent = this.totalQuestions;
@@ -607,6 +832,7 @@
                     document.getElementById('study-section').classList.add('hidden');
                 }
 
+                // 問題数表示を更新（選択されたチャプターの問題数を表示）
                 document.getElementById('question-count').textContent = this.questions.length;
                 
                 // ユーザーID表示更新
@@ -620,9 +846,15 @@
 
             async generateQuestions() {
                 const memo = document.getElementById('memo-input').value.trim();
+                const chapterName = document.getElementById('chapter-name-input').value.trim();
                 
                 if (!memo) {
                     alert('授業メモを入力してください。');
+                    return;
+                }
+
+                if (!chapterName) {
+                    alert('チャプター名を入力してください。');
                     return;
                 }
 
@@ -644,12 +876,14 @@
                     // Claude AIで問題生成
                     const questions = await this.callClaudeAPI(memo, apiKey);
                     
-                    this.questions = questions;
-                    this.saveSubjectData();
-                    this.updateUI();
+                    await this.saveChapterData(chapterName, questions);
+                    
+                    // チャプター一覧を再読み込み
+                    await this.loadChaptersForSubject(this.currentSubject);
                     
                     document.getElementById('memo-input').value = '';
-                    alert('問題を生成しました！');
+                    document.getElementById('chapter-name-input').value = '';
+                    alert(`チャプター「${chapterName}」の問題を生成しました！`);
                     
                 } catch (error) {
                     console.error('API Error:', error);
@@ -657,15 +891,41 @@
                     // APIエラーの場合はサンプル問題で代替
                     if (confirm('AI API接続でエラーが発生しました。サンプル問題で代替しますか？')) {
                         const sampleQuestions = this.generateSampleQuestions(memo);
-                        this.questions = sampleQuestions;
-                        this.saveSubjectData();
-                        this.updateUI();
+                        await this.saveChapterData(chapterName, sampleQuestions);
+                        await this.loadChaptersForSubject(this.currentSubject);
+                        
                         document.getElementById('memo-input').value = '';
-                        alert('サンプル問題を生成しました！');
+                        document.getElementById('chapter-name-input').value = '';
+                        alert(`チャプター「${chapterName}」のサンプル問題を生成しました！`);
                     }
                 } finally {
                     document.getElementById('loading').classList.add('hidden');
                     document.getElementById('generate-questions').disabled = false;
+                }
+            }
+
+            async saveChapterData(chapterName, questions) {
+                try {
+                    const userId = getUserId();
+                    const data = {
+                        user_id: userId,
+                        subject: this.currentSubject,
+                        chapter: chapterName,
+                        questions: questions,
+                        score: 0,
+                        total_questions: 0,
+                        updated_at: new Date().toISOString()
+                    };
+
+                    const { error } = await supabase
+                        .from('study_data')
+                        .upsert(data, { onConflict: 'user_id,subject,chapter' });
+
+                    if (error) throw error;
+
+                } catch (error) {
+                    console.error('チャプターデータ保存エラー:', error);
+                    alert('データ保存でエラーが発生しました: ' + error.message);
                 }
             }
 
@@ -779,9 +1039,15 @@ JSONのみで回答してください（説明文は不要）:
 
             generatePrompt() {
                 const memo = document.getElementById('memo-input').value.trim();
+                const chapterName = document.getElementById('chapter-name-input').value.trim();
                 
                 if (!memo) {
                     alert('授業メモを入力してください。');
+                    return;
+                }
+
+                if (!chapterName) {
+                    alert('チャプター名を入力してください。');
                     return;
                 }
 
@@ -790,6 +1056,7 @@ JSONのみで回答してください（説明文は不要）:
 選択肢問題は4択で、1つの正解と3つの間違った選択肢を作成してください。
 穴埋め問題は重要なキーワードを答えとしてください。
 
+チャプター: ${chapterName}
 授業メモ:
 ${memo}
 
@@ -827,9 +1094,15 @@ ${memo}
 
             processImport() {
                 const importText = document.getElementById('import-text').value.trim();
+                const chapterName = document.getElementById('chapter-name-input').value.trim();
                 
                 if (!importText) {
                     alert('Claude AIの回答を貼り付けてください。');
+                    return;
+                }
+
+                if (!chapterName) {
+                    alert('チャプター名を入力してください。');
                     return;
                 }
 
@@ -868,18 +1141,20 @@ ${memo}
                         }
                     }
                     
-                    // 既存の問題に追加
-                    this.questions = [...this.questions, ...questions];
-                    this.saveSubjectData();
-                    this.updateUI();
-                    
-                    // UI リセット
-                    document.getElementById('memo-input').value = '';
-                    document.getElementById('import-text').value = '';
-                    document.getElementById('import-area').classList.add('hidden');
-                    document.getElementById('prompt-display').classList.add('hidden');
-                    
-                    alert(`${questions.length}問の問題をインポートしました！`);
+                    // チャプターデータとして保存
+                    this.saveChapterData(chapterName, questions).then(() => {
+                        // チャプター一覧を再読み込み
+                        this.loadChaptersForSubject(this.currentSubject);
+                        
+                        // UI リセット
+                        document.getElementById('memo-input').value = '';
+                        document.getElementById('chapter-name-input').value = '';
+                        document.getElementById('import-text').value = '';
+                        document.getElementById('import-area').classList.add('hidden');
+                        document.getElementById('prompt-display').classList.add('hidden');
+                        
+                        alert(`チャプター「${chapterName}」に${questions.length}問の問題をインポートしました！`);
+                    });
                     
                 } catch (error) {
                     alert(`インポートエラー: ${error.message}\n\nJSON形式が正しいか確認してください。`);
@@ -889,6 +1164,16 @@ ${memo}
             }
 
             startQuiz() {
+                if (this.selectedChapters.length === 0) {
+                    alert('学習するチャプターを選択してください。');
+                    return;
+                }
+
+                if (this.questions.length === 0) {
+                    alert('選択されたチャプターに問題がありません。');
+                    return;
+                }
+
                 this.currentQuestionIndex = 0;
                 this.isAnswered = false;
                 
@@ -903,8 +1188,9 @@ ${memo}
                 }
 
                 const question = this.questions[this.currentQuestionIndex];
+                const chapterInfo = question.chapter ? ` (${question.chapter})` : '';
                 document.getElementById('question-text').textContent = 
-                    `問題 ${this.currentQuestionIndex + 1}/${this.questions.length}: ${question.question}`;
+                    `問題 ${this.currentQuestionIndex + 1}/${this.questions.length}${chapterInfo}: ${question.question}`;
 
                 const optionsContainer = document.getElementById('options-container');
                 const fillBlankInput = document.getElementById('fill-blank-input');
@@ -935,7 +1221,7 @@ ${memo}
                 }
             }
 
-            selectOption(index, btnElement) {
+            async selectOption(index, btnElement) {
                 if (this.isAnswered) return;
 
                 const question = this.questions[this.currentQuestionIndex];
@@ -958,13 +1244,16 @@ ${memo}
 
                 this.totalQuestions++;
                 this.isAnswered = true;
-                this.saveSubjectData();
+                
+                // チャプター別スコアを更新
+                await this.updateChapterScore(question.chapter, correct);
+                
                 this.updateUI();
 
                 document.getElementById('next-question').classList.remove('hidden');
             }
 
-            submitAnswer() {
+            async submitAnswer() {
                 if (this.isAnswered) return;
 
                 const userAnswer = document.getElementById('fill-blank-input').value.trim();
@@ -986,11 +1275,51 @@ ${memo}
 
                 this.totalQuestions++;
                 this.isAnswered = true;
-                this.saveSubjectData();
+                
+                // チャプター別スコアを更新
+                await this.updateChapterScore(question.chapter, correct);
+                
                 this.updateUI();
 
                 document.getElementById('submit-answer').classList.add('hidden');
                 document.getElementById('next-question').classList.remove('hidden');
+            }
+
+            async updateChapterScore(chapter, isCorrect) {
+                try {
+                    const userId = getUserId();
+                    
+                    // 該当チャプターの現在のスコアを取得
+                    const { data, error: fetchError } = await supabase
+                        .from('study_data')
+                        .select('score, total_questions')
+                        .eq('user_id', userId)
+                        .eq('subject', this.currentSubject)
+                        .eq('chapter', chapter)
+                        .single();
+
+                    if (fetchError) throw fetchError;
+
+                    const newScore = (data.score || 0) + (isCorrect ? 1 : 0);
+                    const newTotal = (data.total_questions || 0) + 1;
+
+                    // スコアを更新
+                    const { error: updateError } = await supabase
+                        .from('study_data')
+                        .update({
+                            score: newScore,
+                            total_questions: newTotal,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('user_id', userId)
+                        .eq('subject', this.currentSubject)
+                        .eq('chapter', chapter);
+
+                    if (updateError) throw updateError;
+
+                } catch (error) {
+                    console.error('スコア更新エラー:', error);
+                }
             }
 
             nextQuestion() {
@@ -1005,11 +1334,45 @@ ${memo}
             }
 
             resetProgress() {
-                if (confirm('進捗をリセットしますか？')) {
-                    this.score = 0;
-                    this.totalQuestions = 0;
-                    this.saveSubjectData();
+                if (this.selectedChapters.length === 0) {
+                    alert('チャプターを選択してください。');
+                    return;
+                }
+
+                if (confirm(`選択されたチャプターの進捗をリセットしますか？`)) {
+                    this.resetSelectedChaptersProgress();
+                }
+            }
+
+            async resetSelectedChaptersProgress() {
+                try {
+                    const userId = getUserId();
+                    
+                    for (const chapter of this.selectedChapters) {
+                        const { error } = await supabase
+                            .from('study_data')
+                            .update({
+                                score: 0,
+                                total_questions: 0,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('user_id', userId)
+                            .eq('subject', this.currentSubject)
+                            .eq('chapter', chapter);
+
+                        if (error) throw error;
+                    }
+
+                    // データを再読み込み
+                    await this.loadSelectedChaptersData();
+                    await this.loadChaptersForSubject(this.currentSubject);
                     this.updateUI();
+
+                    alert('選択されたチャプターの進捗をリセットしました。');
+
+                } catch (error) {
+                    console.error('進捗リセットエラー:', error);
+                    alert('進捗リセットでエラーが発生しました: ' + error.message);
                 }
             }
 
@@ -1021,8 +1384,9 @@ ${memo}
                     this.questions.forEach((q, index) => {
                         const item = document.createElement('div');
                         item.className = 'question-item';
+                        const chapterInfo = q.chapter ? ` [${q.chapter}]` : '';
                         item.innerHTML = `
-                            <strong>Q${index + 1}:</strong> ${q.question}
+                            <strong>Q${index + 1}${chapterInfo}:</strong> ${q.question}
                             <button class="delete-btn" onclick="app.deleteQuestion(${index})">削除</button>
                         `;
                         listElement.appendChild(item);
@@ -1036,21 +1400,44 @@ ${memo}
             deleteQuestion(index) {
                 if (confirm('この問題を削除しますか？')) {
                     this.questions.splice(index, 1);
-                    this.saveSubjectData();
                     this.updateUI();
                     this.showQuestionList();
                 }
             }
 
             clearSubjectData() {
-                if (confirm(`${this.currentSubject}のデータを全て削除しますか？`)) {
-                    const key = `study_app_${this.currentSubject}`;
-                    localStorage.removeItem(key);
+                if (confirm(`${this.currentSubject}のすべてのチャプターデータを削除しますか？`)) {
+                    this.clearAllChaptersData();
+                }
+            }
+
+            async clearAllChaptersData() {
+                try {
+                    const userId = getUserId();
+                    const { error } = await supabase
+                        .from('study_data')
+                        .delete()
+                        .eq('user_id', userId)
+                        .eq('subject', this.currentSubject);
+
+                    if (error) throw error;
+
+                    // UI状態をリセット
+                    this.selectedChapters = [];
+                    this.allChapters[this.currentSubject] = [];
                     this.questions = [];
                     this.score = 0;
                     this.totalQuestions = 0;
+
                     this.updateUI();
+                    this.displayChapterSelector();
                     document.getElementById('question-list').classList.add('hidden');
+
+                    alert(`${this.currentSubject}のすべてのデータを削除しました。`);
+
+                } catch (error) {
+                    console.error('データ削除エラー:', error);
+                    alert('データ削除でエラーが発生しました: ' + error.message);
                 }
             }
 
@@ -1090,6 +1477,7 @@ ${memo}
                 
                 let debug = '=== デバッグ情報 ===\n\n';
                 debug += `現在の科目: ${this.currentSubject || 'なし'}\n`;
+                debug += `選択されたチャプター: ${this.selectedChapters.join(', ') || 'なし'}\n`;
                 debug += `APIキー: ${apiKey ? `設定済み (${apiKey.substring(0, 10)}...)` : '未設定'}\n`;
                 debug += `問題数: ${this.questions.length}\n`;
                 debug += `正解/総問題: ${this.score}/${this.totalQuestions}\n`;
@@ -1099,15 +1487,14 @@ ${memo}
                 debug += '=== UI表示状態 ===\n';
                 debug += `generate-section: ${document.getElementById('generate-section').classList.contains('hidden') ? '非表示' : '表示'}\n`;
                 debug += `study-section: ${document.getElementById('study-section').classList.contains('hidden') ? '非表示' : '表示'}\n`;
+                debug += `chapter-section: ${document.getElementById('chapter-section').classList.contains('hidden') ? '非表示' : '表示'}\n`;
                 debug += `management-section: ${document.getElementById('management-section').classList.contains('hidden') ? '非表示' : '表示'}\n\n`;
                 
-                debug += '=== LocalStorage内容 ===\n';
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    const value = localStorage.getItem(key);
-                    if (key.startsWith('study_app_') || key === 'anthropic_api_key') {
-                        debug += `${key}: ${value ? '設定済み' : '空'}\n`;
-                    }
+                debug += '=== チャプター情報 ===\n';
+                if (this.currentSubject && this.allChapters[this.currentSubject]) {
+                    this.allChapters[this.currentSubject].forEach(chapter => {
+                        debug += `${chapter.chapter}: ${chapter.questions ? chapter.questions.length : 0}問\n`;
+                    });
                 }
                 
                 alert(debug);
@@ -1122,9 +1509,11 @@ ${memo}
                     button.textContent = '保存中...';
 
                     const userId = getUserId();
-                    let savedCount = 0;
-
-                    // 全科目のデータをクラウドに保存
+                    
+                    // 既存のSupabaseデータは既にクラウドに保存されているので、
+                    // LocalStorageのレガシーデータがあれば移行
+                    let migratedCount = 0;
+                    
                     for (const subject of ['decision', 'philosophy', 'communication']) {
                         const key = `study_app_${subject}`;
                         const localData = localStorage.getItem(key);
@@ -1132,11 +1521,13 @@ ${memo}
                         if (localData) {
                             const parsedData = JSON.parse(localData);
                             
-                            // 問題が存在する場合のみ保存
                             if (parsedData.questions && parsedData.questions.length > 0) {
+                                // レガシーデータを新しい形式に変換
+                                const chapterName = `移行データ - ${new Date().toLocaleDateString()}`;
                                 const data = {
                                     user_id: userId,
                                     subject: subject,
+                                    chapter: chapterName,
                                     questions: parsedData.questions,
                                     score: parsedData.score || 0,
                                     total_questions: parsedData.totalQuestions || 0,
@@ -1145,15 +1536,22 @@ ${memo}
 
                                 const { error } = await supabase
                                     .from('study_data')
-                                    .upsert(data, { onConflict: 'user_id,subject' });
+                                    .upsert(data, { onConflict: 'user_id,subject,chapter' });
 
                                 if (error) throw error;
-                                savedCount++;
+                                migratedCount++;
+                                
+                                // 移行後は古いデータを削除
+                                localStorage.removeItem(key);
                             }
                         }
                     }
 
-                    alert(`クラウド保存完了！${savedCount}科目のデータを保存しました。`);
+                    if (migratedCount > 0) {
+                        alert(`データ移行完了！${migratedCount}科目のレガシーデータをクラウドに移行しました。`);
+                    } else {
+                        alert('データは既にクラウドに保存されています。');
+                    }
 
                 } catch (error) {
                     console.error('保存エラー:', error);
@@ -1180,28 +1578,17 @@ ${memo}
                     if (error) throw error;
 
                     if (data.length === 0) {
-                        alert('クラウドにデータが見つかりませんでした。\n\n先に他のデバイスで「📤 クラウドに保存」を実行してください。');
+                        alert('クラウドにデータが見つかりませんでした。\n\n先に他のデバイスで問題を作成してください。');
                         return;
                     }
 
-                    // LocalStorage に保存
-                    data.forEach(item => {
-                        const key = `study_app_${item.subject}`;
-                        const localData = {
-                            questions: item.questions || [],
-                            score: item.score || 0,
-                            totalQuestions: item.total_questions || 0
-                        };
-                        localStorage.setItem(key, JSON.stringify(localData));
-                    });
-
-                    // 現在の科目データを再読み込み
+                    // 現在の科目のチャプターを再読み込み
                     if (this.currentSubject) {
-                        this.loadSubjectData();
+                        await this.loadChaptersForSubject(this.currentSubject);
                         this.updateUI();
                     }
 
-                    alert(`クラウド読み込み完了！${data.length}科目のデータを読み込みました。\n\n科目を選択して学習を開始してください。`);
+                    alert(`クラウド読み込み完了！${data.length}件のチャプターデータを読み込みました。\n\n科目とチャプターを選択して学習を開始してください。`);
 
                 } catch (error) {
                     console.error('読み込みエラー:', error);
@@ -1214,76 +1601,15 @@ ${memo}
             }
 
             exportData() {
-                const allData = {
-                    exportDate: new Date().toISOString().split('T')[0],
-                    userId: getUserId(),
-                    subjects: {}
-                };
-
-                ['decision', 'philosophy', 'communication'].forEach(subject => {
-                    const key = `study_app_${subject}`;
-                    const data = localStorage.getItem(key);
-                    if (data) {
-                        allData.subjects[subject] = JSON.parse(data);
-                    }
-                });
-
-                const jsonStr = JSON.stringify(allData, null, 2);
-                
-                // クリップボードにコピー
-                navigator.clipboard.writeText(jsonStr).then(() => {
-                    alert('データをクリップボードにコピーしました！他のデバイスで「データインポート」に貼り付けてください。');
-                }).catch(() => {
-                    // フォールバック：テキストエリアに表示
-                    const textarea = document.createElement('textarea');
-                    textarea.value = jsonStr;
-                    document.body.appendChild(textarea);
-                    textarea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textarea);
-                    alert('データをコピーしました！他のデバイスで「データインポート」に貼り付けてください。');
-                });
+                alert('新しいバージョンでは、データは自動的にクラウドに保存されます。\n「📥 クラウドから読み込み」を使用して他のデバイスでデータを同期してください。');
             }
 
             showDataImportArea() {
-                document.getElementById('data-import-area').classList.remove('hidden');
+                alert('新しいバージョンでは、「📥 クラウドから読み込み」を使用してデータを同期してください。');
             }
 
             processDataImport() {
-                const importText = document.getElementById('import-data-text').value.trim();
-                
-                if (!importText) {
-                    alert('エクスポートしたデータを貼り付けてください。');
-                    return;
-                }
-
-                try {
-                    const data = JSON.parse(importText);
-                    
-                    if (!data.subjects) {
-                        throw new Error('無効なデータ形式です');
-                    }
-
-                    // LocalStorageに保存
-                    Object.entries(data.subjects).forEach(([subject, subjectData]) => {
-                        const key = `study_app_${subject}`;
-                        localStorage.setItem(key, JSON.stringify(subjectData));
-                    });
-
-                    // 現在の科目データを再読み込み
-                    if (this.currentSubject) {
-                        this.loadSubjectData();
-                        this.updateUI();
-                    }
-
-                    document.getElementById('import-data-text').value = '';
-                    document.getElementById('data-import-area').classList.add('hidden');
-                    
-                    alert(`データインポート完了！${Object.keys(data.subjects).length}科目のデータをインポートしました。`);
-                    
-                } catch (error) {
-                    alert(`インポートエラー: ${error.message}`);
-                }
+                alert('新しいバージョンでは、「📥 クラウドから読み込み」を使用してデータを同期してください。');
             }
 
             setUserId() {
