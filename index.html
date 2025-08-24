@@ -815,11 +815,12 @@
                     document.getElementById('chapter-section').classList.add('hidden');
                     return;
                 }
-
+            
                 document.getElementById('generate-section').classList.remove('hidden');
                 document.getElementById('management-section').classList.remove('hidden');
-
-                if (this.selectedChapters.length > 0 && this.questions.length > 0) {
+            
+                // 修正: チャプターが選択されていれば学習セクションを表示
+                if (this.selectedChapters.length > 0) {
                     document.getElementById('study-section').classList.remove('hidden');
                     document.getElementById('score').textContent = this.score;
                     document.getElementById('total').textContent = this.totalQuestions;
@@ -831,7 +832,7 @@
                 } else {
                     document.getElementById('study-section').classList.add('hidden');
                 }
-
+            
                 // 問題数表示を更新（選択されたチャプターの問題数を表示）
                 document.getElementById('question-count').textContent = this.questions.length;
                 
