@@ -908,25 +908,56 @@
             async saveChapterData(chapterName, questions) {
                 try {
                     const userId = getUserId();
+                    
+                    // 既存データを取得
+                    const { data: existingData, error: fetchError } = await supabase
+                        .from('study_data')
+                        .select('questions, score, total_questions')
+                        .eq('user_id', userId)
+                        .eq('subject', this.currentSubject)
+                        .eq('chapter', chapterName)
+                        .single();
+                    
+                    let allQuestions = questions;
+                    let currentScore = 0;
+                    let currentTotal = 0;
+                    
+                    // 既存データがあり、questionsが空でない場合は追加
+                    if (existingData && existingData.questions && existingData.questions.length > 0) {
+                        allQuestions = [...existingData.questions, ...questions];
+                        currentScore = existingData.score || 0;
+                        currentTotal = existingData.total_questions || 0;
+                        console.log(`既存の${existingData.questions.length}問に${questions.length}問を追加`);
+                    }
+                    
                     const data = {
                         user_id: userId,
                         subject: this.currentSubject,
                         chapter: chapterName,
-                        questions: questions,
-                        score: 0,
-                        total_questions: 0,
+                        questions: allQuestions,
+                        score: currentScore,
+                        total_questions: currentTotal,
                         updated_at: new Date().toISOString()
                     };
-
+            
                     const { error } = await supabase
                         .from('study_data')
                         .upsert(data, { onConflict: 'user_id,subject,chapter' });
-
+            
                     if (error) throw error;
-
+            
+                    // 成功メッセージを更新
+                    const isAddition = existingData && existingData.questions && existingData.questions.length > 0;
+                    const message = isAddition 
+                        ? `チャプター「${chapterName}」に${questions.length}問を追加しました！（合計: ${allQuestions.length}問）`
+                        : `チャプター「${chapterName}」に${questions.length}問を保存しました！`;
+                    
+                    return { isAddition, totalQuestions: allQuestions.length, message };
+            
                 } catch (error) {
                     console.error('チャプターデータ保存エラー:', error);
                     alert('データ保存でエラーが発生しました: ' + error.message);
+                    throw error;
                 }
             }
 
