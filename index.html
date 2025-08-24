@@ -376,7 +376,7 @@
                 <h3>問題生成</h3>
                 <div class="input-section">
                     <label for="chapter-name-input">チャプター名:</label>
-                    <input type="text" id="chapter-name-input" class="memo-input" style="height: 40px;" placeholder="例: 第1章 意思決定の基礎理論">
+                    <input type="text" id="chapter-name-input" class="memo-input" style="height: 40px;" placeholder="例: 1, 2, 3">
                 </div>
                 <div class="input-section">
                     <label for="memo-input">授業メモを貼り付けて問題を生成：</label>
@@ -715,7 +715,7 @@
                     const percentage = total > 0 ? Math.round((score / total) * 100) : 0;
                     
                     btn.innerHTML = `
-                        <div style="font-weight: bold;">${chapterData.chapter}</div>
+                        <div style="font-weight: bold;">チャプター ${chapterData.chapter}</div>
                         <div class="chapter-info">問題数: ${questionCount} | 正解率: ${percentage}%</div>
                     `;
                     
@@ -1056,7 +1056,7 @@ JSONのみで回答してください（説明文は不要）:
 選択肢問題は4択で、1つの正解と3つの間違った選択肢を作成してください。
 穴埋め問題は重要なキーワードを答えとしてください。
 
-チャプター: ${chapterName}
+対象チャプター: ${chapterName}
 授業メモ:
 ${memo}
 
@@ -1188,7 +1188,7 @@ ${memo}
                 }
 
                 const question = this.questions[this.currentQuestionIndex];
-                const chapterInfo = question.chapter ? ` (${question.chapter})` : '';
+                const chapterInfo = question.chapter ? ` (チャプター ${question.chapter})` : '';
                 document.getElementById('question-text').textContent = 
                     `問題 ${this.currentQuestionIndex + 1}/${this.questions.length}${chapterInfo}: ${question.question}`;
 
@@ -1384,7 +1384,7 @@ ${memo}
                     this.questions.forEach((q, index) => {
                         const item = document.createElement('div');
                         item.className = 'question-item';
-                        const chapterInfo = q.chapter ? ` [${q.chapter}]` : '';
+                        const chapterInfo = q.chapter ? ` [チャプター ${q.chapter}]` : '';
                         item.innerHTML = `
                             <strong>Q${index + 1}${chapterInfo}:</strong> ${q.question}
                             <button class="delete-btn" onclick="app.deleteQuestion(${index})">削除</button>
