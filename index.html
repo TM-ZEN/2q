@@ -354,9 +354,14 @@
             <!-- 科目選択 -->
             <h3>科目を選択してください</h3>
             <div class="subject-selector">
-                <button class="subject-btn" data-subject="decision">意思決定の理論</button>
-                <button class="subject-btn" data-subject="philosophy">公共哲学</button>
-                <button class="subject-btn" data-subject="communication">多言語ITコミュニケーション</button>
+                <!-- <button class="subject-btn" data-subject="decision">意思決定の理論</button> -->
+                <!-- <button class="subject-btn" data-subject="philosophy">公共哲学</button> -->
+                <!-- <button class="subject-btn" data-subject="communication">多言語ITコミュニケーション</button> -->
+                <button class="subject-btn" data-subject="math-history">数学史</button>
+                <button class="subject-btn" data-subject="linear-algebra">線形代数</button>
+                <button class="subject-btn" data-subject="IT-history">IT産業史</button>
+                <button class="subject-btn" data-subject="modern-society-and-math">現代社会と数学</button>
+                <button class="subject-btn" data-subject="logic-and-communication">伝わる論理とコミュニケーション</button>
             </div>
 
             <!-- チャプター選択 -->
@@ -1545,7 +1550,7 @@ ${memo}
                     // LocalStorageのレガシーデータがあれば移行
                     let migratedCount = 0;
                     
-                    for (const subject of ['decision', 'philosophy', 'communication']) {
+                    for (const subject of ['logic-and-communication', 'math-history', 'linear-algebra', 'IT-history', 'modern-society-and-math']) {
                         const key = `study_app_${subject}`;
                         const localData = localStorage.getItem(key);
                         
