@@ -120,7 +120,6 @@
             color: #e0e6ff;
         }
         
-        /* モバイル対応 */
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
@@ -351,32 +350,21 @@
         <div class="card">
             <h2>学習設定</h2>
             
-            <!-- 科目選択 -->
             <h3>科目を選択してください</h3>
             <div class="subject-selector">
-                <!-- <button class="subject-btn" data-subject="decision">意思決定の理論</button> -->
                 <button class="subject-btn" data-subject="kigyoukeiei">企業経営</button>
                 <button class="subject-btn" data-subject="shinrigaku">心理学</button>
-                <!-- <button class="subject-btn" data-subject="math-history">数学史</button> -->
-                <!-- <button class="subject-btn" data-subject="linear-algebra">線形代数</button> -->
-                <!-- <button class="subject-btn" data-subject="IT-history">IT産業史</button> -->
-                <!-- <button class="subject-btn" data-subject="modern-society-and-math">現代社会と数学</button> -->
-                <!-- <button class="subject-btn" data-subject="logic-and-communication">伝わる論理とコミュニケーション</button> -->
             </div>
 
-            <!-- チャプター選択 -->
             <div id="chapter-section" class="hidden" style="margin-top: 20px;">
                 <h3>学習するチャプターを選択してください（複数選択可）</h3>
-                <div id="chapter-selector" class="chapter-selector">
-                    <!-- チャプターボタンが動的に追加される -->
-                </div>
+                <div id="chapter-selector" class="chapter-selector"></div>
                 <div style="margin-top: 15px;">
                     <button id="select-all-chapters" class="action-btn" style="background: #28a745;">すべて選択</button>
                     <button id="deselect-all-chapters" class="action-btn" style="background: #dc3545;">選択解除</button>
                 </div>
             </div>
 
-            <!-- 問題生成セクション -->
             <div id="generate-section" class="hidden">
                 <h3>問題生成</h3>
                 <div class="input-section">
@@ -396,14 +384,12 @@
                 
                 <div id="loading" class="loading hidden">問題を生成中...</div>
                 
-                <!-- プロンプト表示エリア -->
                 <div id="prompt-display" class="hidden" style="margin-top: 20px;">
                     <label>以下をClaude AIにコピペしてください：</label>
                     <textarea id="prompt-text" class="memo-input" readonly style="background: #f8f9fa; height: 150px;"></textarea>
                     <button id="copy-prompt" class="action-btn">プロンプトをコピー</button>
                 </div>
                 
-                <!-- インポートエリア -->
                 <div id="import-area" class="hidden" style="margin-top: 20px;">
                     <label>Claude AIの回答をここに貼り付けてください：</label>
                     <textarea id="import-text" class="memo-input" placeholder="Claude AIが生成したJSON形式の問題をここに貼り付けてください..."></textarea>
@@ -411,7 +397,6 @@
                 </div>
             </div>
 
-            <!-- 学習セクション -->
             <div id="study-section" class="hidden">
                 <div class="score-display">
                     正解率: <span id="score">0</span>/<span id="total">0</span> (<span id="percentage">0</span>%)
@@ -423,7 +408,6 @@
                 <button id="reset-progress" class="action-btn">進捗リセット</button>
             </div>
 
-            <!-- クイズセクション -->
             <div id="quiz-section" class="quiz-section">
                 <div class="question-card">
                     <div class="question-text" id="question-text"></div>
@@ -434,7 +418,6 @@
                 </div>
             </div>
 
-            <!-- 問題管理セクション -->
             <div id="management-section" class="management-section hidden">
                 <h3>問題管理</h3>
                 <p>保存済み問題数: <span id="question-count">0</span></p>
@@ -443,7 +426,6 @@
                 <button id="manage-api-key" class="action-btn" style="background: #6c757d;">APIキー管理</button>
                 <button id="debug-info" class="action-btn" style="background: #17a2b8;">デバッグ情報</button>
                 
-                <!-- データ移行セクション -->
                 <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
                     <h4>📱 デバイス間データ移行</h4>
                     <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px;">
@@ -463,7 +445,6 @@
                     <button id="load-from-cloud" class="action-btn" style="background: #17a2b8;">📥 クラウドから読み込み</button>
                 </div>
                 
-                <!-- インポートエリア -->
                 <div id="data-import-area" class="hidden" style="margin-top: 15px;">
                     <label>エクスポートしたデータを貼り付けてください：</label>
                     <textarea id="import-data-text" class="memo-input" style="height: 100px;" placeholder="エクスポートしたデータをここに貼り付けてください..."></textarea>
@@ -476,35 +457,10 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // Supabase設定
         const SUPABASE_URL = 'https://zayngisercbordbjzats.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpheW5naXNlcmNib3JkYmp6YXRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzMTY4NzEsImV4cCI6MjA3MDg5Mjg3MX0.kRO52pBNwowL2AVdAvan2Kz8xwARrWe-52HdDTK9Qbs'; // 実際のキーに置き換えてください
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpheW5naXNlcmNib3JkYmp6YXRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzMTY4NzEsImV4cCI6MjA3MDg5Mjg3MX0.kRO52pBNwowL2AVdAvan2Kz8xwARrWe-52HdDTK9Qbs';
+        let supabaseClient = null;
 
-        // テーブル構造を新しいものに更新
-        async function updateTableStructure() {
-            try {
-                // チャプター列を追加（存在しない場合のみ）
-                await supabase.rpc('exec', { 
-                    sql: `
-                        ALTER TABLE study_data 
-                        ADD COLUMN IF NOT EXISTS chapter text;
-                        
-                        -- 複合ユニーク制約を更新
-                        DROP INDEX IF EXISTS study_data_user_id_subject_key;
-                        CREATE UNIQUE INDEX IF NOT EXISTS study_data_user_id_subject_chapter_key 
-                        ON study_data(user_id, subject, chapter);
-                    `
-                });
-            } catch (error) {
-                console.log('テーブル更新済みまたはエラー:', error);
-            }
-        }
-        
-        // 初回実行
-        updateTableStructure();
-        
-        // ユーザーID生成（ブラウザ固有）
         function getUserId() {
             let userId = localStorage.getItem('study_app_user_id');
             if (!userId) {
@@ -517,8 +473,8 @@
         class StudyApp {
             constructor() {
                 this.currentSubject = null;
-                this.selectedChapters = []; // 選択されたチャプター
-                this.allChapters = {}; // 科目ごとのチャプター情報
+                this.selectedChapters = [];
+                this.allChapters = {};
                 this.questions = [];
                 this.currentQuestionIndex = 0;
                 this.score = 0;
@@ -534,14 +490,12 @@
             }
 
             bindEvents() {
-                // 科目選択
                 document.querySelectorAll('.subject-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         this.selectSubject(e.target.dataset.subject);
                     });
                 });
 
-                // チャプター全選択/解除
                 document.getElementById('select-all-chapters').addEventListener('click', () => {
                     this.selectAllChapters();
                 });
@@ -550,52 +504,42 @@
                     this.deselectAllChapters();
                 });
 
-                // 問題生成
                 document.getElementById('generate-questions').addEventListener('click', () => {
                     this.generateQuestions();
                 });
 
-                // プロンプト生成
                 document.getElementById('generate-prompt').addEventListener('click', () => {
                     this.generatePrompt();
                 });
 
-                // 問題インポート
                 document.getElementById('import-questions').addEventListener('click', () => {
                     this.showImportArea();
                 });
 
-                // プロンプトコピー
                 document.getElementById('copy-prompt').addEventListener('click', () => {
                     this.copyPrompt();
                 });
 
-                // インポート処理
                 document.getElementById('process-import').addEventListener('click', () => {
                     this.processImport();
                 });
 
-                // 学習開始
                 document.getElementById('start-quiz').addEventListener('click', () => {
                     this.startQuiz();
                 });
 
-                // 回答送信
                 document.getElementById('submit-answer').addEventListener('click', () => {
                     this.submitAnswer();
                 });
 
-                // 次の問題
                 document.getElementById('next-question').addEventListener('click', () => {
                     this.nextQuestion();
                 });
 
-                // 進捗リセット
                 document.getElementById('reset-progress').addEventListener('click', () => {
                     this.resetProgress();
                 });
 
-                // 問題管理
                 document.getElementById('show-questions').addEventListener('click', () => {
                     this.showQuestionList();
                 });
@@ -604,47 +548,38 @@
                     this.clearSubjectData();
                 });
 
-                // APIキー管理
                 document.getElementById('manage-api-key').addEventListener('click', () => {
                     this.manageAPIKey();
                 });
 
-                // デバッグ情報
                 document.getElementById('debug-info').addEventListener('click', () => {
                     this.showDebugInfo();
                 });
 
-                // データエクスポート
                 document.getElementById('export-data').addEventListener('click', () => {
                     this.exportData();
                 });
 
-                // データインポート
                 document.getElementById('import-data').addEventListener('click', () => {
                     this.showDataImportArea();
                 });
 
-                // データインポート処理
                 document.getElementById('process-data-import').addEventListener('click', () => {
                     this.processDataImport();
                 });
 
-                // ユーザーID設定
                 document.getElementById('set-user-id').addEventListener('click', () => {
                     this.setUserId();
                 });
 
-                // クラウド保存
                 document.getElementById('save-to-cloud').addEventListener('click', () => {
                     this.saveToCloud();
                 });
 
-                // クラウド読み込み
                 document.getElementById('load-from-cloud').addEventListener('click', () => {
                     this.loadFromCloud();
                 });
 
-                // Enter キーで回答送信
                 document.getElementById('fill-blank-input').addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
                         this.submitAnswer();
@@ -654,9 +589,8 @@
 
             selectSubject(subject) {
                 this.currentSubject = subject;
-                this.selectedChapters = []; // チャプター選択をリセット
+                this.selectedChapters = [];
                 
-                // ボタンの状態更新
                 document.querySelectorAll('.subject-btn').forEach(btn => {
                     btn.classList.remove('active');
                 });
@@ -668,9 +602,8 @@
 
             async loadChaptersForSubject(subject) {
                 try {
-                    // Supabaseから該当科目のチャプター一覧を取得
                     const userId = getUserId();
-                    const { data, error } = await supabase
+                    const { data, error } = await supabaseClient
                         .from('study_data')
                         .select('chapter, questions, score, total_questions')
                         .eq('user_id', userId)
@@ -679,7 +612,6 @@
 
                     if (error) throw error;
 
-                    // チャプター情報を整理
                     this.allChapters[subject] = data || [];
                     this.displayChapterSelector();
                     
@@ -780,7 +712,7 @@
 
                 try {
                     const userId = getUserId();
-                    const { data, error } = await supabase
+                    const { data, error } = await supabaseClient
                         .from('study_data')
                         .select('*')
                         .eq('user_id', userId)
@@ -789,14 +721,12 @@
 
                     if (error) throw error;
 
-                    // 選択されたチャプターの問題を統合
                     this.questions = [];
                     this.score = 0;
                     this.totalQuestions = 0;
 
                     data.forEach(chapterData => {
                         if (chapterData.questions && chapterData.questions.length > 0) {
-                            // 各問題にチャプター情報を追加
                             const questionsWithChapter = chapterData.questions.map(q => ({
                                 ...q,
                                 chapter: chapterData.chapter
@@ -824,7 +754,6 @@
                 document.getElementById('generate-section').classList.remove('hidden');
                 document.getElementById('management-section').classList.remove('hidden');
             
-                // 修正: チャプターが選択されていれば学習セクションを表示
                 if (this.selectedChapters.length > 0) {
                     document.getElementById('study-section').classList.remove('hidden');
                     document.getElementById('score').textContent = this.score;
@@ -838,10 +767,7 @@
                     document.getElementById('study-section').classList.add('hidden');
                 }
             
-                // 問題数表示を更新（選択されたチャプターの問題数を表示）
                 document.getElementById('question-count').textContent = this.questions.length;
-                
-                // ユーザーID表示更新
                 this.updateUserIdDisplay();
             }
 
@@ -864,7 +790,6 @@
                     return;
                 }
 
-                // APIキーの確認
                 let apiKey = localStorage.getItem('anthropic_api_key');
                 if (!apiKey) {
                     apiKey = prompt('Anthropic APIキーを入力してください（今後のために保存されます）:');
@@ -879,12 +804,8 @@
                 document.getElementById('generate-questions').disabled = true;
 
                 try {
-                    // Claude AIで問題生成
                     const questions = await this.callClaudeAPI(memo, apiKey);
-                    
                     await this.saveChapterData(chapterName, questions);
-                    
-                    // チャプター一覧を再読み込み
                     await this.loadChaptersForSubject(this.currentSubject);
                     
                     document.getElementById('memo-input').value = '';
@@ -893,8 +814,6 @@
                     
                 } catch (error) {
                     console.error('API Error:', error);
-                    
-                    // APIエラーの場合はサンプル問題で代替
                     if (confirm('AI API接続でエラーが発生しました。サンプル問題で代替しますか？')) {
                         const sampleQuestions = this.generateSampleQuestions(memo);
                         await this.saveChapterData(chapterName, sampleQuestions);
@@ -914,8 +833,7 @@
                 try {
                     const userId = getUserId();
                     
-                    // 既存データを取得
-                    const { data: existingData, error: fetchError } = await supabase
+                    const { data: existingData, error: fetchError } = await supabaseClient
                         .from('study_data')
                         .select('questions, score, total_questions')
                         .eq('user_id', userId)
@@ -927,12 +845,10 @@
                     let currentScore = 0;
                     let currentTotal = 0;
                     
-                    // 既存データがあり、questionsが空でない場合は追加
                     if (existingData && existingData.questions && existingData.questions.length > 0) {
                         allQuestions = [...existingData.questions, ...questions];
                         currentScore = existingData.score || 0;
                         currentTotal = existingData.total_questions || 0;
-                        console.log(`既存の${existingData.questions.length}問に${questions.length}問を追加`);
                     }
                     
                     const data = {
@@ -945,13 +861,12 @@
                         updated_at: new Date().toISOString()
                     };
             
-                    const { error } = await supabase
+                    const { error } = await supabaseClient
                         .from('study_data')
                         .upsert(data, { onConflict: 'user_id,subject,chapter' });
             
                     if (error) throw error;
             
-                    // 成功メッセージを更新
                     const isAddition = existingData && existingData.questions && existingData.questions.length > 0;
                     const message = isAddition 
                         ? `チャプター「${chapterName}」に${questions.length}問を追加しました！（合計: ${allQuestions.length}問）`
@@ -967,15 +882,12 @@
             }
 
             generateSampleQuestions(memo) {
-                // AI APIの代わりにサンプル問題を生成（実装時はAI APIに置き換え）
                 const sampleQuestions = [];
                 const words = memo.split(/\s+/).filter(word => word.length > 2);
                 
                 for (let i = 0; i < Math.min(15, words.length); i++) {
                     const word = words[i];
-                    
                     if (i % 2 === 0) {
-                        // 選択肢問題
                         sampleQuestions.push({
                             type: 'multiple',
                             question: `「${word}」について正しい説明はどれですか？`,
@@ -988,7 +900,6 @@
                             correctAnswer: 0
                         });
                     } else {
-                        // 穴埋め問題
                         sampleQuestions.push({
                             type: 'fillblank',
                             question: `授業で学んだ重要な概念「____」について説明してください。`,
@@ -996,7 +907,6 @@
                         });
                     }
                 }
-                
                 return sampleQuestions;
             }
 
@@ -1053,7 +963,6 @@ JSONのみで回答してください（説明文は不要）:
                 const data = await response.json();
                 const content = data.content[0].text;
                 
-                // JSONの抽出
                 let jsonStr = content;
                 const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
                 if (jsonMatch) {
@@ -1069,7 +978,6 @@ JSONのみで回答してください（説明文は不要）:
                     return JSON.parse(jsonStr);
                 } catch (parseError) {
                     console.error('JSON Parse Error:', parseError);
-                    console.error('Response content:', content);
                     throw new Error('Claude APIの応答をJSONとして解析できませんでした');
                 }
             }
@@ -1144,15 +1052,11 @@ ${memo}
                 }
 
                 try {
-                    // JSONの抽出を試行
                     let jsonStr = importText;
-                    
-                    // コードブロックで囲まれている場合
                     const jsonMatch = importText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
                     if (jsonMatch) {
                         jsonStr = jsonMatch[1];
                     } else {
-                        // [ で始まり ] で終わるJSONを抽出
                         const arrayMatch = importText.match(/\[[\s\S]*\]/);
                         if (arrayMatch) {
                             jsonStr = arrayMatch[0];
@@ -1161,7 +1065,6 @@ ${memo}
                     
                     const questions = JSON.parse(jsonStr);
                     
-                    // 問題形式の検証
                     if (!Array.isArray(questions)) {
                         throw new Error('問題は配列形式である必要があります');
                     }
@@ -1177,12 +1080,10 @@ ${memo}
                             throw new Error('穴埋め問題にはcorrectAnswerが必要です');
                         }
                     }
-                    // チャプターデータとして保存
+
                     this.saveChapterData(chapterName, questions).then((result) => {
-                        // チャプター一覧を再読み込み
                         this.loadChaptersForSubject(this.currentSubject);
                         
-                        // UI リセット
                         document.getElementById('memo-input').value = '';
                         document.getElementById('chapter-name-input').value = '';
                         document.getElementById('import-text').value = '';
@@ -1194,8 +1095,6 @@ ${memo}
                     
                 } catch (error) {
                     alert(`インポートエラー: ${error.message}\n\nJSON形式が正しいか確認してください。`);
-                    console.error('Import error:', error);
-                    console.error('Import text:', importText);
                 }
             }
 
@@ -1204,15 +1103,12 @@ ${memo}
                     alert('学習するチャプターを選択してください。');
                     return;
                 }
-
                 if (this.questions.length === 0) {
                     alert('選択されたチャプターに問題がありません。');
                     return;
                 }
-
                 this.currentQuestionIndex = 0;
                 this.isAnswered = false;
-                
                 document.getElementById('quiz-section').style.display = 'block';
                 this.showQuestion();
             }
@@ -1222,7 +1118,6 @@ ${memo}
                     this.endQuiz();
                     return;
                 }
-
                 const question = this.questions[this.currentQuestionIndex];
                 const chapterInfo = question.chapter ? ` (チャプター ${question.chapter})` : '';
                 document.getElementById('question-text').textContent = 
@@ -1233,7 +1128,6 @@ ${memo}
                 const submitBtn = document.getElementById('submit-answer');
                 const nextBtn = document.getElementById('next-question');
 
-                // リセット
                 optionsContainer.innerHTML = '';
                 fillBlankInput.classList.add('hidden');
                 submitBtn.classList.add('hidden');
@@ -1241,7 +1135,6 @@ ${memo}
                 this.isAnswered = false;
 
                 if (question.type === 'multiple') {
-                    // 選択肢問題
                     question.options.forEach((option, index) => {
                         const btn = document.createElement('button');
                         btn.className = 'option-btn';
@@ -1250,7 +1143,6 @@ ${memo}
                         optionsContainer.appendChild(btn);
                     });
                 } else if (question.type === 'fillblank') {
-                    // 穴埋め問題
                     fillBlankInput.classList.remove('hidden');
                     fillBlankInput.value = '';
                     submitBtn.classList.remove('hidden');
@@ -1259,39 +1151,30 @@ ${memo}
 
             async selectOption(index, btnElement) {
                 if (this.isAnswered) return;
-
                 const question = this.questions[this.currentQuestionIndex];
                 const correct = index === question.correctAnswer;
 
-                // 全ての選択肢ボタンを無効化
                 document.querySelectorAll('.option-btn').forEach(btn => {
                     btn.style.pointerEvents = 'none';
                 });
 
-                // 正解・不正解の表示
                 if (correct) {
                     btnElement.classList.add('correct');
                     this.score++;
                 } else {
                     btnElement.classList.add('incorrect');
-                    // 正解も表示
                     document.querySelectorAll('.option-btn')[question.correctAnswer].classList.add('correct');
                 }
 
                 this.totalQuestions++;
                 this.isAnswered = true;
-                
-                // チャプター別スコアを更新
                 await this.updateChapterScore(question.chapter, correct);
-                
                 this.updateUI();
-
                 document.getElementById('next-question').classList.remove('hidden');
             }
 
             async submitAnswer() {
                 if (this.isAnswered) return;
-
                 const userAnswer = document.getElementById('fill-blank-input').value.trim();
                 const question = this.questions[this.currentQuestionIndex];
 
@@ -1301,7 +1184,6 @@ ${memo}
                 }
 
                 const correct = userAnswer.toLowerCase() === question.correctAnswer.toLowerCase();
-
                 if (correct) {
                     alert('正解！');
                     this.score++;
@@ -1311,10 +1193,7 @@ ${memo}
 
                 this.totalQuestions++;
                 this.isAnswered = true;
-                
-                // チャプター別スコアを更新
                 await this.updateChapterScore(question.chapter, correct);
-                
                 this.updateUI();
 
                 document.getElementById('submit-answer').classList.add('hidden');
@@ -1324,9 +1203,7 @@ ${memo}
             async updateChapterScore(chapter, isCorrect) {
                 try {
                     const userId = getUserId();
-                    
-                    // 該当チャプターの現在のスコアを取得
-                    const { data, error: fetchError } = await supabase
+                    const { data, error: fetchError } = await supabaseClient
                         .from('study_data')
                         .select('score, total_questions')
                         .eq('user_id', userId)
@@ -1339,8 +1216,7 @@ ${memo}
                     const newScore = (data.score || 0) + (isCorrect ? 1 : 0);
                     const newTotal = (data.total_questions || 0) + 1;
 
-                    // スコアを更新
-                    const { error: updateError } = await supabase
+                    const { error: updateError } = await supabaseClient
                         .from('study_data')
                         .update({
                             score: newScore,
@@ -1352,7 +1228,6 @@ ${memo}
                         .eq('chapter', chapter);
 
                     if (updateError) throw updateError;
-
                 } catch (error) {
                     console.error('スコア更新エラー:', error);
                 }
@@ -1374,7 +1249,6 @@ ${memo}
                     alert('チャプターを選択してください。');
                     return;
                 }
-
                 if (confirm(`選択されたチャプターの進捗をリセットしますか？`)) {
                     this.resetSelectedChaptersProgress();
                 }
@@ -1383,9 +1257,8 @@ ${memo}
             async resetSelectedChaptersProgress() {
                 try {
                     const userId = getUserId();
-                    
                     for (const chapter of this.selectedChapters) {
-                        const { error } = await supabase
+                        const { error } = await supabaseClient
                             .from('study_data')
                             .update({
                                 score: 0,
@@ -1395,17 +1268,12 @@ ${memo}
                             .eq('user_id', userId)
                             .eq('subject', this.currentSubject)
                             .eq('chapter', chapter);
-
                         if (error) throw error;
                     }
-
-                    // データを再読み込み
                     await this.loadSelectedChaptersData();
                     await this.loadChaptersForSubject(this.currentSubject);
                     this.updateUI();
-
                     alert('選択されたチャプターの進捗をリセットしました。');
-
                 } catch (error) {
                     console.error('進捗リセットエラー:', error);
                     alert('進捗リセットでエラーが発生しました: ' + error.message);
@@ -1414,7 +1282,6 @@ ${memo}
 
             showQuestionList() {
                 const listElement = document.getElementById('question-list');
-                
                 if (listElement.classList.contains('hidden')) {
                     listElement.innerHTML = '';
                     this.questions.forEach((q, index) => {
@@ -1450,27 +1317,22 @@ ${memo}
             async clearAllChaptersData() {
                 try {
                     const userId = getUserId();
-                    const { error } = await supabase
+                    const { error } = await supabaseClient
                         .from('study_data')
                         .delete()
                         .eq('user_id', userId)
                         .eq('subject', this.currentSubject);
-
                     if (error) throw error;
 
-                    // UI状態をリセット
                     this.selectedChapters = [];
                     this.allChapters[this.currentSubject] = [];
                     this.questions = [];
                     this.score = 0;
                     this.totalQuestions = 0;
-
                     this.updateUI();
                     this.displayChapterSelector();
                     document.getElementById('question-list').classList.add('hidden');
-
                     alert(`${this.currentSubject}のすべてのデータを削除しました。`);
-
                 } catch (error) {
                     console.error('データ削除エラー:', error);
                     alert('データ削除でエラーが発生しました: ' + error.message);
@@ -1480,13 +1342,10 @@ ${memo}
             manageAPIKey() {
                 const currentKey = localStorage.getItem('anthropic_api_key');
                 let message = 'Anthropic APIキー管理\n\n';
-                
                 if (currentKey) {
                     message += `現在のキー: ${currentKey.substring(0, 10)}...\n\n`;
                     message += '1. 新しいキーを入力\n2. キーを削除\n3. キャンセル';
-                    
                     const choice = prompt(message + '\n\n選択してください (1/2/3):');
-                    
                     if (choice === '1') {
                         const newKey = prompt('新しいAnthropic APIキーを入力してください:');
                         if (newKey) {
@@ -1510,7 +1369,6 @@ ${memo}
 
             showDebugInfo() {
                 const apiKey = localStorage.getItem('anthropic_api_key');
-                
                 let debug = '=== デバッグ情報 ===\n\n';
                 debug += `現在の科目: ${this.currentSubject || 'なし'}\n`;
                 debug += `選択されたチャプター: ${this.selectedChapters.join(', ') || 'なし'}\n`;
@@ -1519,46 +1377,33 @@ ${memo}
                 debug += `正解/総問題: ${this.score}/${this.totalQuestions}\n`;
                 debug += `画面幅: ${window.innerWidth}px\n`;
                 debug += `ユーザーエージェント: ${navigator.userAgent.includes('Mobile') ? 'モバイル' : 'デスクトップ'}\n\n`;
-                
                 debug += '=== UI表示状態 ===\n';
                 debug += `generate-section: ${document.getElementById('generate-section').classList.contains('hidden') ? '非表示' : '表示'}\n`;
                 debug += `study-section: ${document.getElementById('study-section').classList.contains('hidden') ? '非表示' : '表示'}\n`;
                 debug += `chapter-section: ${document.getElementById('chapter-section').classList.contains('hidden') ? '非表示' : '表示'}\n`;
                 debug += `management-section: ${document.getElementById('management-section').classList.contains('hidden') ? '非表示' : '表示'}\n\n`;
-                
                 debug += '=== チャプター情報 ===\n';
                 if (this.currentSubject && this.allChapters[this.currentSubject]) {
                     this.allChapters[this.currentSubject].forEach(chapter => {
                         debug += `${chapter.chapter}: ${chapter.questions ? chapter.questions.length : 0}問\n`;
                     });
                 }
-                
                 alert(debug);
             }
-
-            // Supabase関連メソッド
 
             async saveToCloud() {
                 try {
                     const button = document.getElementById('save-to-cloud');
                     button.disabled = true;
                     button.textContent = '保存中...';
-
                     const userId = getUserId();
-                    
-                    // 既存のSupabaseデータは既にクラウドに保存されているので、
-                    // LocalStorageのレガシーデータがあれば移行
                     let migratedCount = 0;
-                    
                     for (const subject of ['kigyoukeiei', 'shinrigaku']) {
                         const key = `study_app_${subject}`;
                         const localData = localStorage.getItem(key);
-                        
                         if (localData) {
                             const parsedData = JSON.parse(localData);
-                            
                             if (parsedData.questions && parsedData.questions.length > 0) {
-                                // レガシーデータを新しい形式に変換
                                 const chapterName = `移行データ - ${new Date().toLocaleDateString()}`;
                                 const data = {
                                     user_id: userId,
@@ -1569,26 +1414,20 @@ ${memo}
                                     total_questions: parsedData.totalQuestions || 0,
                                     updated_at: new Date().toISOString()
                                 };
-
-                                const { error } = await supabase
+                                const { error } = await supabaseClient
                                     .from('study_data')
                                     .upsert(data, { onConflict: 'user_id,subject,chapter' });
-
                                 if (error) throw error;
                                 migratedCount++;
-                                
-                                // 移行後は古いデータを削除
                                 localStorage.removeItem(key);
                             }
                         }
                     }
-
                     if (migratedCount > 0) {
                         alert(`データ移行完了！${migratedCount}科目のレガシーデータをクラウドに移行しました。`);
                     } else {
                         alert('データは既にクラウドに保存されています。');
                     }
-
                 } catch (error) {
                     console.error('保存エラー:', error);
                     alert('保存でエラーが発生しました: ' + error.message);
@@ -1604,28 +1443,21 @@ ${memo}
                     const button = document.getElementById('load-from-cloud');
                     button.disabled = true;
                     button.textContent = '読み込み中...';
-
                     const userId = getUserId();
-                    const { data, error } = await supabase
+                    const { data, error } = await supabaseClient
                         .from('study_data')
                         .select('*')
                         .eq('user_id', userId);
-
                     if (error) throw error;
-
                     if (data.length === 0) {
                         alert('クラウドにデータが見つかりませんでした。\n\n先に他のデバイスで問題を作成してください。');
                         return;
                     }
-
-                    // 現在の科目のチャプターを再読み込み
                     if (this.currentSubject) {
                         await this.loadChaptersForSubject(this.currentSubject);
                         this.updateUI();
                     }
-
                     alert(`クラウド読み込み完了！${data.length}件のチャプターデータを読み込みました。\n\n科目とチャプターを選択して学習を開始してください。`);
-
                 } catch (error) {
                     console.error('読み込みエラー:', error);
                     alert('読み込みでエラーが発生しました: ' + error.message);
@@ -1650,42 +1482,43 @@ ${memo}
 
             setUserId() {
                 const newUserId = document.getElementById('user-id-input').value.trim();
-                
                 if (!newUserId) {
                     alert('ユーザーIDを入力してください。');
                     return;
                 }
-
-                // ID形式の簡単な検証
                 if (newUserId.length < 3) {
                     alert('ユーザーIDは3文字以上で入力してください。');
                     return;
                 }
-
                 if (!/^[a-zA-Z0-9_-]+$/.test(newUserId)) {
                     alert('ユーザーIDは英数字、ハイフン、アンダースコアのみ使用できます。');
                     return;
                 }
-
                 const currentUserId = localStorage.getItem('study_app_user_id');
-                
                 if (currentUserId && currentUserId !== newUserId) {
                     if (!confirm(`現在のユーザーID「${currentUserId}」を「${newUserId}」に変更しますか？\n\n注意: 変更後はクラウド同期でデータを再取得する必要があります。`)) {
                         return;
                     }
                 }
-
-                // ユーザーID設定
                 localStorage.setItem('study_app_user_id', newUserId);
                 this.updateUserIdDisplay();
                 document.getElementById('user-id-input').value = '';
-
                 alert(`ユーザーIDを「${newUserId}」に設定しました！\n\n他のデバイスでも同じIDを設定してクラウド同期を行ってください。`);
             }
         }
 
-        // アプリ初期化
-        const app = new StudyApp();
+        // CDNの読み込み完了を確認してからsupabaseを初期化し、アプリを起動
+        function initSupabase() {
+            if (window.supabase) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                console.log('Supabase初期化完了');
+                window.app = new StudyApp();
+            } else {
+                console.warn('Supabase CDN未読み込み。再試行中...');
+                setTimeout(initSupabase, 200);
+            }
+        }
+        document.addEventListener('DOMContentLoaded', initSupabase);
     </script>
 </body>
 </html>
