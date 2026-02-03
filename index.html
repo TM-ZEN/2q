@@ -603,20 +603,39 @@
             async loadChaptersForSubject(subject) {
                 try {
                     const userId = getUserId();
-                    const { data, error } = await supabaseClient
-                        .from('study_data')
-                        .select('chapter, questions, score, total_questions')
-                        .eq('user_id', userId)
-                        .eq('subject', subject)
-                        .not('chapter', 'is', null);
 
+                    let query = supabaseClient
+                        .from('study_data')
+                        .eq('user_id', userId)
+                        .eq('subject', subject);
+
+                    if (chapterColumnExists) {
+                        // chapter列がある場合: chapter別に取得し、nullでないものだけ
+                        query = query
+                            .select('chapter, questions, score, total_questions')
+                            .not('chapter', 'is', null);
+                    } else {
+                        // chapter列がない場合: 全カラムを取得し、chapterとして 'default' を付与する
+                        query = query.select('questions, score, total_questions');
+                    }
+
+                    const { data, error } = await query;
                     if (error) throw error;
 
-                    this.allChapters[subject] = data || [];
+                    if (chapterColumnExists) {
+                        this.allChapters[subject] = data || [];
+                    } else {
+                        // chapter列なしの場合、1件だけのはずなので 'default' チャプターとして扱う
+                        this.allChapters[subject] = (data || []).map(row => ({
+                            ...row,
+                            chapter: 'default'
+                        }));
+                    }
+
                     this.displayChapterSelector();
                     
                 } catch (error) {
-                    console.error('チャプター読み込みエラー:', error);
+                    console.error('チャプター読み込みエラー:', JSON.stringify(error, null, 2), error);
                     this.allChapters[subject] = [];
                     this.displayChapterSelector();
                 }
@@ -712,13 +731,19 @@
 
                 try {
                     const userId = getUserId();
-                    const { data, error } = await supabaseClient
+
+                    let query = supabaseClient
                         .from('study_data')
                         .select('*')
                         .eq('user_id', userId)
-                        .eq('subject', this.currentSubject)
-                        .in('chapter', this.selectedChapters);
+                        .eq('subject', this.currentSubject);
 
+                    if (chapterColumnExists) {
+                        query = query.in('chapter', this.selectedChapters);
+                    }
+                    // chapter列がない場合は全件取得（subject で絞っているため問題ない）
+
+                    const { data, error } = await query;
                     if (error) throw error;
 
                     this.questions = [];
@@ -727,9 +752,10 @@
 
                     data.forEach(chapterData => {
                         if (chapterData.questions && chapterData.questions.length > 0) {
+                            const chapterLabel = chapterColumnExists ? chapterData.chapter : 'default';
                             const questionsWithChapter = chapterData.questions.map(q => ({
                                 ...q,
-                                chapter: chapterData.chapter
+                                chapter: chapterLabel
                             }));
                             this.questions = [...this.questions, ...questionsWithChapter];
                         }
@@ -738,7 +764,7 @@
                     });
 
                 } catch (error) {
-                    console.error('チャプターデータ読み込みエラー:', error);
+                    console.error('チャプターデータ読み込みエラー:', JSON.stringify(error, null, 2), error);
                 }
             }
 
@@ -813,7 +839,7 @@
                     alert(`チャプター「${chapterName}」の問題を生成しました！`);
                     
                 } catch (error) {
-                    console.error('API Error:', error);
+                    console.error('API Error:', JSON.stringify(error, null, 2), error);
                     if (confirm('AI API接続でエラーが発生しました。サンプル問題で代替しますか？')) {
                         const sampleQuestions = this.generateSampleQuestions(memo);
                         await this.saveChapterData(chapterName, sampleQuestions);
@@ -833,13 +859,20 @@
                 try {
                     const userId = getUserId();
                     
-                    const { data: existingData, error: fetchError } = await supabaseClient
+                    // 既存データの検索クエリを構築
+                    let fetchQuery = supabaseClient
                         .from('study_data')
                         .select('questions, score, total_questions')
                         .eq('user_id', userId)
-                        .eq('subject', this.currentSubject)
-                        .eq('chapter', chapterName)
-                        .single();
+                        .eq('subject', this.currentSubject);
+
+                    if (chapterColumnExists) {
+                        fetchQuery = fetchQuery.eq('chapter', chapterName);
+                    }
+                    fetchQuery = fetchQuery.single();
+
+                    const { data: existingData, error: fetchError } = await fetchQuery;
+                    // .single() で見つからない場合はerrorになるが、それは正常（新規の場合）
                     
                     let allQuestions = questions;
                     let currentScore = 0;
@@ -854,16 +887,25 @@
                     const data = {
                         user_id: userId,
                         subject: this.currentSubject,
-                        chapter: chapterName,
                         questions: allQuestions,
                         score: currentScore,
                         total_questions: currentTotal,
                         updated_at: new Date().toISOString()
                     };
+
+                    // chapter列があれば付与する
+                    if (chapterColumnExists) {
+                        data.chapter = chapterName;
+                    }
             
+                    // upsert の conflictカラムも chapter列の有無で変える
+                    const conflictColumns = chapterColumnExists
+                        ? 'user_id,subject,chapter'
+                        : 'user_id,subject';
+
                     const { error } = await supabaseClient
                         .from('study_data')
-                        .upsert(data, { onConflict: 'user_id,subject,chapter' });
+                        .upsert(data, { onConflict: conflictColumns });
             
                     if (error) throw error;
             
@@ -875,8 +917,8 @@
                     return { isAddition, totalQuestions: allQuestions.length, message };
             
                 } catch (error) {
-                    console.error('チャプターデータ保存エラー:', error);
-                    alert('データ保存でエラーが発生しました: ' + error.message);
+                    console.error('チャプターデータ保存エラー:', JSON.stringify(error, null, 2), error);
+                    alert('データ保存でエラーが発生しました: ' + (error.message || JSON.stringify(error)));
                     throw error;
                 }
             }
@@ -977,7 +1019,7 @@ JSONのみで回答してください（説明文は不要）:
                 try {
                     return JSON.parse(jsonStr);
                 } catch (parseError) {
-                    console.error('JSON Parse Error:', parseError);
+                    console.error('JSON Parse Error:', JSON.stringify(parseError, null, 2), parseError);
                     throw new Error('Claude APIの応答をJSONとして解析できませんでした');
                 }
             }
@@ -1203,20 +1245,22 @@ ${memo}
             async updateChapterScore(chapter, isCorrect) {
                 try {
                     const userId = getUserId();
-                    const { data, error: fetchError } = await supabaseClient
+
+                    let fetchQuery = supabaseClient
                         .from('study_data')
                         .select('score, total_questions')
                         .eq('user_id', userId)
-                        .eq('subject', this.currentSubject)
-                        .eq('chapter', chapter)
-                        .single();
-
+                        .eq('subject', this.currentSubject);
+                    if (chapterColumnExists) {
+                        fetchQuery = fetchQuery.eq('chapter', chapter);
+                    }
+                    const { data, error: fetchError } = await fetchQuery.single();
                     if (fetchError) throw fetchError;
 
                     const newScore = (data.score || 0) + (isCorrect ? 1 : 0);
                     const newTotal = (data.total_questions || 0) + 1;
 
-                    const { error: updateError } = await supabaseClient
+                    let updateQuery = supabaseClient
                         .from('study_data')
                         .update({
                             score: newScore,
@@ -1224,12 +1268,14 @@ ${memo}
                             updated_at: new Date().toISOString()
                         })
                         .eq('user_id', userId)
-                        .eq('subject', this.currentSubject)
-                        .eq('chapter', chapter);
-
+                        .eq('subject', this.currentSubject);
+                    if (chapterColumnExists) {
+                        updateQuery = updateQuery.eq('chapter', chapter);
+                    }
+                    const { error: updateError } = await updateQuery;
                     if (updateError) throw updateError;
                 } catch (error) {
-                    console.error('スコア更新エラー:', error);
+                    console.error('スコア更新エラー:', JSON.stringify(error, null, 2), error);
                 }
             }
 
@@ -1257,7 +1303,24 @@ ${memo}
             async resetSelectedChaptersProgress() {
                 try {
                     const userId = getUserId();
-                    for (const chapter of this.selectedChapters) {
+
+                    if (chapterColumnExists) {
+                        // chapter列あり: チャプターごとに個別リセット
+                        for (const chapter of this.selectedChapters) {
+                            const { error } = await supabaseClient
+                                .from('study_data')
+                                .update({
+                                    score: 0,
+                                    total_questions: 0,
+                                    updated_at: new Date().toISOString()
+                                })
+                                .eq('user_id', userId)
+                                .eq('subject', this.currentSubject)
+                                .eq('chapter', chapter);
+                            if (error) throw error;
+                        }
+                    } else {
+                        // chapter列なし: subject全体で一括リセット
                         const { error } = await supabaseClient
                             .from('study_data')
                             .update({
@@ -1266,8 +1329,7 @@ ${memo}
                                 updated_at: new Date().toISOString()
                             })
                             .eq('user_id', userId)
-                            .eq('subject', this.currentSubject)
-                            .eq('chapter', chapter);
+                            .eq('subject', this.currentSubject);
                         if (error) throw error;
                     }
                     await this.loadSelectedChaptersData();
@@ -1275,7 +1337,7 @@ ${memo}
                     this.updateUI();
                     alert('選択されたチャプターの進捗をリセットしました。');
                 } catch (error) {
-                    console.error('進捗リセットエラー:', error);
+                    console.error('進捗リセットエラー:', JSON.stringify(error, null, 2), error);
                     alert('進捗リセットでエラーが発生しました: ' + error.message);
                 }
             }
@@ -1334,7 +1396,7 @@ ${memo}
                     document.getElementById('question-list').classList.add('hidden');
                     alert(`${this.currentSubject}のすべてのデータを削除しました。`);
                 } catch (error) {
-                    console.error('データ削除エラー:', error);
+                    console.error('データ削除エラー:', JSON.stringify(error, null, 2), error);
                     alert('データ削除でエラーが発生しました: ' + error.message);
                 }
             }
@@ -1429,7 +1491,7 @@ ${memo}
                         alert('データは既にクラウドに保存されています。');
                     }
                 } catch (error) {
-                    console.error('保存エラー:', error);
+                    console.error('保存エラー:', JSON.stringify(error, null, 2), error);
                     alert('保存でエラーが発生しました: ' + error.message);
                 } finally {
                     const button = document.getElementById('save-to-cloud');
@@ -1459,7 +1521,7 @@ ${memo}
                     }
                     alert(`クラウド読み込み完了！${data.length}件のチャプターデータを読み込みました。\n\n科目とチャプターを選択して学習を開始してください。`);
                 } catch (error) {
-                    console.error('読み込みエラー:', error);
+                    console.error('読み込みエラー:', JSON.stringify(error, null, 2), error);
                     alert('読み込みでエラーが発生しました: ' + error.message);
                 } finally {
                     const button = document.getElementById('load-from-cloud');
@@ -1508,11 +1570,49 @@ ${memo}
         }
 
         // CDNの読み込み完了を確認してからsupabaseを初期化し、アプリを起動
+        // テーブルのカラム構成を確認し、chapter列があるかを検証する
+        let chapterColumnExists = true; // デフォルトでtrue、確認後に変更
+
+        async function checkTableColumns() {
+            try {
+                // study_dataテーブルから1件だけ取得し、レスポンスのキーを見る
+                const { data, error } = await supabaseClient
+                    .from('study_data')
+                    .select('*')
+                    .limit(1);
+                if (error) {
+                    console.warn('カラム確認クエリエラー:', JSON.stringify(error));
+                    // テーブルが空でもエラーにならないはず
+                    // エラー = テーブル自体が存在しない可能性
+                    chapterColumnExists = false;
+                    return;
+                }
+                if (data && data.length > 0) {
+                    // レスポンスに chapter キーがあるか確認
+                    chapterColumnExists = 'chapter' in data[0];
+                    console.log('chapter列存在確認:', chapterColumnExists, 'カラム:', Object.keys(data[0]));
+                } else {
+                    // データが0件 = テーブルは存在するがデータなし
+                    // この場合は chapter 列の存在が分からないため、テスト用に insert して確認
+                    // しかし権限の問題があるため、とりあえず false とする
+                    console.warn('study_dataテーブルにデータが0件。chapter列存在は不明。');
+                    chapterColumnExists = false;
+                }
+            } catch (e) {
+                console.error('カラム確認エラー:', JSON.stringify(e), e);
+                chapterColumnExists = false;
+            }
+        }
+
         function initSupabase() {
             if (window.supabase) {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 console.log('Supabase初期化完了');
-                window.app = new StudyApp();
+                // カラム確認後にアプリを起動
+                checkTableColumns().then(() => {
+                    console.log('chapterColumnExists:', chapterColumnExists);
+                    window.app = new StudyApp();
+                });
             } else {
                 console.warn('Supabase CDN未読み込み。再試行中...');
                 setTimeout(initSupabase, 200);
