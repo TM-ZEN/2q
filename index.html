@@ -604,19 +604,21 @@
                 try {
                     const userId = getUserId();
 
-                    let query = supabaseClient
-                        .from('study_data')
-                        .eq('user_id', userId)
-                        .eq('subject', subject);
-
+                    // select()は必ず from() の直後に来る必要がある
+                    let query;
                     if (chapterColumnExists) {
-                        // chapter列がある場合: chapter別に取得し、nullでないものだけ
-                        query = query
+                        query = supabaseClient
+                            .from('study_data')
                             .select('chapter, questions, score, total_questions')
+                            .eq('user_id', userId)
+                            .eq('subject', subject)
                             .not('chapter', 'is', null);
                     } else {
-                        // chapter列がない場合: 全カラムを取得し、chapterとして 'default' を付与する
-                        query = query.select('questions, score, total_questions');
+                        query = supabaseClient
+                            .from('study_data')
+                            .select('questions, score, total_questions')
+                            .eq('user_id', userId)
+                            .eq('subject', subject);
                     }
 
                     const { data, error } = await query;
@@ -1606,7 +1608,11 @@ ${memo}
 
         function initSupabase() {
             if (window.supabase) {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                    global: {
+                        fetch: (...args) => fetch(...args)
+                    }
+                });
                 console.log('Supabase初期化完了');
                 // カラム確認後にアプリを起動
                 checkTableColumns().then(() => {
