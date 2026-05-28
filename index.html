@@ -352,8 +352,11 @@
             
             <h3>科目を選択してください</h3>
             <div class="subject-selector">
-                <button class="subject-btn" data-subject="kigyoukeiei">企業経営</button>
-                <button class="subject-btn" data-subject="shinrigaku">心理学</button>
+                <button class="subject-btn" data-subject="kagaku">科学哲学</button>
+                <button class="subject-btn" data-subject="projectmanagement">プロジェクトマネジメント概論</button>
+                <button class="subject-btn" data-subject="kigyoukeiei">企業経営と会計</button>
+                <button class="subject-btn" data-subject="gender">ジェンダー論</button>
+                <button class="subject-btn" data-subject="deeplearning">ディープラーニング1</button>
             </div>
 
             <div id="chapter-section" class="hidden" style="margin-top: 20px;">
@@ -1462,7 +1465,7 @@ ${memo}
                     button.textContent = '保存中...';
                     const userId = getUserId();
                     let migratedCount = 0;
-                    for (const subject of ['kigyoukeiei', 'shinrigaku']) {
+                    for (const subject of ['kagaku', 'projectmanagement', 'kigyoukeiei', 'gender', 'deeplearning']) {
                         const key = `study_app_${subject}`;
                         const localData = localStorage.getItem(key);
                         if (localData) {
