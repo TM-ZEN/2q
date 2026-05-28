@@ -5,6 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>1問1答学習アプリ</title>
     <style>
+        :root {
+            --bg-main: rgb(14, 22, 34);
+            --bg-elevated: rgb(22, 32, 48);
+            --bg-layer: rgb(30, 42, 60);
+            --bg-soft: rgb(36, 50, 70);
+            --border: rgb(58, 76, 102);
+            --primary: rgb(68, 102, 156);
+            --primary-hover: rgb(82, 118, 176);
+            --text-main: rgb(222, 232, 245);
+            --text-muted: rgb(154, 171, 193);
+            --success: rgb(112, 168, 148);
+            --danger: rgb(176, 116, 124);
+            --warning: rgb(182, 150, 96);
+            --shadow: rgba(2, 8, 18, 0.45);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,9 +29,9 @@
         
         body {
             font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, rgb(14, 22, 34) 0%, rgb(19, 30, 46) 100%);
             min-height: 100vh;
-            color: #333;
+            color: var(--text-main);
         }
         
         .container {
@@ -26,7 +42,7 @@
         
         .app-header {
             text-align: center;
-            color: white;
+            color: var(--text-main);
             margin-bottom: 30px;
         }
         
@@ -36,11 +52,12 @@
         }
         
         .card {
-            background: white;
+            background: var(--bg-elevated);
             border-radius: 15px;
             padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 30px var(--shadow);
             margin-bottom: 20px;
+            border: 1px solid var(--border);
         }
         
         .subject-selector {
@@ -54,25 +71,25 @@
             padding: 15px;
             border: none;
             border-radius: 10px;
-            background: #f8f9fa;
-            color: #333;
+            background: var(--bg-layer);
+            color: var(--text-main);
             font-size: 16px;
             cursor: pointer;
             transition: all 0.3s ease;
-            border: 2px solid transparent;
+            border: 2px solid var(--border);
             min-height: 60px;
             word-wrap: break-word;
         }
         
         .subject-btn:hover {
-            background: #e9ecef;
+            background: var(--bg-soft);
             transform: translateY(-2px);
         }
         
         .subject-btn.active {
-            background: #667eea;
-            color: white;
-            border-color: #5a67d8;
+            background: var(--primary);
+            color: var(--text-main);
+            border-color: var(--primary-hover);
         }
         
         .chapter-selector {
@@ -84,10 +101,10 @@
         
         .chapter-btn {
             padding: 12px 15px;
-            border: 2px solid #ddd;
+            border: 2px solid var(--border);
             border-radius: 8px;
-            background: #f8f9fa;
-            color: #333;
+            background: var(--bg-layer);
+            color: var(--text-main);
             font-size: 14px;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -100,24 +117,24 @@
         }
         
         .chapter-btn:hover {
-            border-color: #667eea;
-            background: #e9ecef;
+            border-color: var(--primary);
+            background: var(--bg-soft);
         }
         
         .chapter-btn.selected {
-            background: #667eea;
-            color: white;
-            border-color: #5a67d8;
+            background: var(--primary);
+            color: var(--text-main);
+            border-color: var(--primary-hover);
         }
         
         .chapter-info {
             font-size: 12px;
-            color: #666;
+            color: var(--text-muted);
             margin-top: 5px;
         }
         
         .chapter-btn.selected .chapter-info {
-            color: #e0e6ff;
+            color: rgb(202, 217, 237);
         }
         
         @media (max-width: 768px) {
@@ -180,28 +197,30 @@
             display: block;
             margin-bottom: 10px;
             font-weight: bold;
-            color: #555;
+            color: var(--text-muted);
         }
         
         .memo-input {
             width: 100%;
             height: 200px;
             padding: 15px;
-            border: 2px solid #ddd;
+            border: 2px solid var(--border);
             border-radius: 8px;
             font-size: 14px;
             resize: vertical;
             font-family: inherit;
+            background: var(--bg-layer);
+            color: var(--text-main);
         }
         
         .memo-input:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--primary);
         }
         
         .generate-btn, .action-btn {
-            background: #667eea;
-            color: white;
+            background: var(--primary);
+            color: var(--text-main);
             border: none;
             padding: 12px 24px;
             border-radius: 8px;
@@ -212,11 +231,11 @@
         }
         
         .generate-btn:hover, .action-btn:hover {
-            background: #5a67d8;
+            background: var(--primary-hover);
         }
         
         .generate-btn:disabled {
-            background: #ccc;
+            background: rgb(77, 90, 108);
             cursor: not-allowed;
         }
         
@@ -227,7 +246,7 @@
         .progress-bar {
             width: 100%;
             height: 8px;
-            background: #e9ecef;
+            background: var(--bg-layer);
             border-radius: 4px;
             margin-bottom: 20px;
             overflow: hidden;
@@ -235,16 +254,16 @@
         
         .progress-fill {
             height: 100%;
-            background: #667eea;
+            background: var(--primary);
             transition: width 0.3s ease;
         }
         
         .question-card {
-            background: #f8f9fa;
+            background: var(--bg-layer);
             border-radius: 10px;
             padding: 25px;
             margin-bottom: 20px;
-            border-left: 5px solid #667eea;
+            border-left: 5px solid var(--primary);
         }
         
         .question-text {
@@ -260,42 +279,45 @@
         
         .option-btn {
             padding: 15px;
-            border: 2px solid #ddd;
+            border: 2px solid var(--border);
             border-radius: 8px;
-            background: white;
+            background: var(--bg-elevated);
+            color: var(--text-main);
             text-align: left;
             cursor: pointer;
             transition: all 0.3s ease;
         }
         
         .option-btn:hover {
-            border-color: #667eea;
+            border-color: var(--primary);
         }
         
         .option-btn.correct {
-            background: #d4edda;
-            border-color: #28a745;
+            background: rgba(112, 168, 148, 0.25);
+            border-color: var(--success);
         }
         
         .option-btn.incorrect {
-            background: #f8d7da;
-            border-color: #dc3545;
+            background: rgba(176, 116, 124, 0.25);
+            border-color: var(--danger);
         }
         
         .fill-blank-input {
             width: 100%;
             padding: 15px;
-            border: 2px solid #ddd;
+            border: 2px solid var(--border);
             border-radius: 8px;
             font-size: 16px;
             margin-bottom: 15px;
+            background: var(--bg-elevated);
+            color: var(--text-main);
         }
         
         .score-display {
             text-align: center;
             font-size: 18px;
             margin-bottom: 20px;
-            color: #555;
+            color: var(--text-muted);
         }
         
         .hidden {
@@ -304,39 +326,51 @@
         
         .loading {
             text-align: center;
-            color: #667eea;
+            color: var(--primary);
             font-style: italic;
         }
         
         .management-section {
             margin-top: 30px;
-            border-top: 2px solid #eee;
+            border-top: 2px solid var(--border);
             padding-top: 20px;
         }
         
         .question-list {
             max-height: 300px;
             overflow-y: auto;
-            border: 1px solid #ddd;
+            border: 1px solid var(--border);
             border-radius: 8px;
             margin-top: 10px;
+            background: var(--bg-layer);
         }
         
         .question-item {
             padding: 10px;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid var(--border);
             font-size: 14px;
         }
         
         .delete-btn {
-            background: #dc3545;
-            color: white;
+            background: var(--danger);
+            color: var(--text-main);
             border: none;
             padding: 5px 10px;
             border-radius: 4px;
             cursor: pointer;
             font-size: 12px;
             float: right;
+        }
+
+        input[type="text"] {
+            background: var(--bg-layer);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+
+        input::placeholder,
+        textarea::placeholder {
+            color: var(--text-muted);
         }
     </style>
 </head>
@@ -363,8 +397,8 @@
                 <h3>学習するチャプターを選択してください（複数選択可）</h3>
                 <div id="chapter-selector" class="chapter-selector"></div>
                 <div style="margin-top: 15px;">
-                    <button id="select-all-chapters" class="action-btn" style="background: #28a745;">すべて選択</button>
-                    <button id="deselect-all-chapters" class="action-btn" style="background: #dc3545;">選択解除</button>
+                    <button id="select-all-chapters" class="action-btn" style="background: rgb(112, 168, 148);">すべて選択</button>
+                    <button id="deselect-all-chapters" class="action-btn" style="background: rgb(176, 116, 124);">選択解除</button>
                 </div>
             </div>
 
@@ -381,15 +415,15 @@
                 
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <button id="generate-questions" class="generate-btn">AIで問題生成 (実験的)</button>
-                    <button id="generate-prompt" class="generate-btn" style="background: #28a745;">Claude用プロンプト生成</button>
-                    <button id="import-questions" class="generate-btn" style="background: #fd7e14;">生成済み問題インポート</button>
+                    <button id="generate-prompt" class="generate-btn" style="background: rgb(112, 168, 148);">Claude用プロンプト生成</button>
+                    <button id="import-questions" class="generate-btn" style="background: rgb(182, 150, 96);">生成済み問題インポート</button>
                 </div>
                 
                 <div id="loading" class="loading hidden">問題を生成中...</div>
                 
                 <div id="prompt-display" class="hidden" style="margin-top: 20px;">
                     <label>以下をClaude AIにコピペしてください：</label>
-                    <textarea id="prompt-text" class="memo-input" readonly style="background: #f8f9fa; height: 150px;"></textarea>
+                    <textarea id="prompt-text" class="memo-input" readonly style="background: rgb(30, 42, 60); height: 150px;"></textarea>
                     <button id="copy-prompt" class="action-btn">プロンプトをコピー</button>
                 </div>
                 
@@ -425,27 +459,27 @@
                 <h3>問題管理</h3>
                 <p>保存済み問題数: <span id="question-count">0</span></p>
                 <button id="show-questions" class="action-btn">問題一覧表示</button>
-                <button id="clear-subject-data" class="action-btn" style="background: #dc3545;">科目データ削除</button>
-                <button id="manage-api-key" class="action-btn" style="background: #6c757d;">APIキー管理</button>
-                <button id="debug-info" class="action-btn" style="background: #17a2b8;">デバッグ情報</button>
+                <button id="clear-subject-data" class="action-btn" style="background: rgb(176, 116, 124);">科目データ削除</button>
+                <button id="manage-api-key" class="action-btn" style="background: rgb(87, 104, 128);">APIキー管理</button>
+                <button id="debug-info" class="action-btn" style="background: rgb(88, 130, 155);">デバッグ情報</button>
                 
                 <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
                     <h4>📱 デバイス間データ移行</h4>
-                    <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                    <div style="margin-bottom: 15px; padding: 10px; background: rgb(30, 42, 60); border-radius: 8px;">
                         <label style="font-weight: bold; margin-bottom: 5px; display: block;">ユーザーID:</label>
                         <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                            <input type="text" id="user-id-input" placeholder="共有用のユーザーIDを入力" style="flex: 1; min-width: 200px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                            <button id="set-user-id" class="action-btn" style="background: #6f42c1;">ID設定</button>
+                            <input type="text" id="user-id-input" placeholder="共有用のユーザーIDを入力" style="flex: 1; min-width: 200px; padding: 8px; border: 1px solid rgb(58, 76, 102); border-radius: 4px;">
+                            <button id="set-user-id" class="action-btn" style="background: rgb(109, 97, 160);">ID設定</button>
                         </div>
-                        <small style="color: #666; margin-top: 5px; display: block;">
+                        <small style="color: rgb(154, 171, 193); margin-top: 5px; display: block;">
                             現在のID: <span id="current-user-id">未設定</span>
                         </small>
                     </div>
                     
-                    <button id="export-data" class="action-btn" style="background: #28a745;">📋 データエクスポート</button>
-                    <button id="import-data" class="action-btn" style="background: #fd7e14;">📋 データインポート</button>
-                    <button id="save-to-cloud" class="action-btn" style="background: #007bff;">📤 クラウドに保存</button>
-                    <button id="load-from-cloud" class="action-btn" style="background: #17a2b8;">📥 クラウドから読み込み</button>
+                    <button id="export-data" class="action-btn" style="background: rgb(112, 168, 148);">📋 データエクスポート</button>
+                    <button id="import-data" class="action-btn" style="background: rgb(182, 150, 96);">📋 データインポート</button>
+                    <button id="save-to-cloud" class="action-btn" style="background: rgb(68, 102, 156);">📤 クラウドに保存</button>
+                    <button id="load-from-cloud" class="action-btn" style="background: rgb(88, 130, 155);">📥 クラウドから読み込み</button>
                 </div>
                 
                 <div id="data-import-area" class="hidden" style="margin-top: 15px;">
