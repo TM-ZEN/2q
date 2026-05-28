@@ -301,6 +301,64 @@
             background: rgba(176, 116, 124, 0.25);
             border-color: var(--danger);
         }
+
+        .question-meta {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .meta-badge {
+            font-size: 12px;
+            padding: 3px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: var(--bg-layer);
+            color: var(--text-muted);
+        }
+
+        .feedback-box {
+            margin: 16px 0;
+            padding: 16px;
+            border-radius: 10px;
+            border-left: 4px solid var(--border);
+            background: var(--bg-layer);
+            line-height: 1.7;
+        }
+
+        .feedback-box.correct {
+            border-left-color: var(--success);
+            background: rgba(112, 168, 148, 0.12);
+        }
+
+        .feedback-box.incorrect {
+            border-left-color: var(--danger);
+            background: rgba(176, 116, 124, 0.12);
+        }
+
+        .feedback-verdict {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .feedback-box.correct .feedback-verdict {
+            color: var(--success);
+        }
+
+        .feedback-box.incorrect .feedback-verdict {
+            color: var(--danger);
+        }
+
+        .feedback-answer {
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+
+        .feedback-explanation {
+            color: var(--text-muted);
+            font-size: 15px;
+        }
         
         .fill-blank-input {
             width: 100%;
@@ -447,9 +505,11 @@
 
             <div id="quiz-section" class="quiz-section">
                 <div class="question-card">
+                    <div id="question-meta" class="question-meta"></div>
                     <div class="question-text" id="question-text"></div>
                     <div id="options-container"></div>
                     <input type="text" id="fill-blank-input" class="fill-blank-input hidden" placeholder="答えを入力してください">
+                    <div id="feedback-box" class="feedback-box hidden"></div>
                     <button id="submit-answer" class="action-btn hidden">回答</button>
                     <button id="next-question" class="action-btn hidden">次の問題</button>
                 </div>
@@ -994,10 +1054,31 @@
             async callClaudeAPI(memo, apiKey) {
                 const apiUrl = 'https://api.anthropic.com/v1/messages';
                 
-                const prompt = `以下の授業メモから、15問の1問1答問題を作成してください。
-選択肢問題と穴埋め問題を半々程度で混在させてください。
-選択肢問題は4択で、1つの正解と3つの間違った選択肢を作成してください。
-穴埋め問題は重要なキーワードを答えとしてください。
+                const prompt = `あなたは認知科学に基づく学習教材の設計者です。
+以下の授業メモから、長期記憶への定着を最大化する一問一答を16問作成してください。
+目的は「単語の暗記」ではなく「検索練習による概念理解の強化」です。
+
+# 出題対象の選び方
+- メモの中の「核心概念・原理・因果関係」を優先し、瑣末な数値や固有名詞だけの暗記は避ける。
+- 1問につき1概念のみを問う。
+- メモに書かれている内容のみを根拠とし、推測で事実を補わない。
+
+# 問題形式の配分（合計16問）
+- 穴埋め（自力想起）: 8問
+- 4択（再認）: 8問
+- 16問中、最低4問は「理由・比較・適用」を問う問題にする。
+
+# 4択の誤答ルール【最重要】
+- 誤答は「ありがちな誤解」「似て非なる概念」「文脈違い」に基づき、もっともらしく作る。
+- 4択は長さ・粒度・文体をそろえ、正解だけが目立たないようにする。
+
+# 穴埋めのルール
+- 空欄は概念の意味を担う中心語句にする。語数から答えが推測できないようにする。
+
+# 各問に必須のフィールド
+- explanation: 正解の理由（4択は誤答がなぜ誤りかも簡潔に）。
+- cognitiveLevel: "recall" / "understand" / "apply" のいずれか。
+- difficulty: 1〜3の整数。
 
 授業メモ:
 ${memo}
@@ -1008,12 +1089,18 @@ JSONのみで回答してください（説明文は不要）:
     "type": "multiple",
     "question": "問題文",
     "options": ["選択肢1", "選択肢2", "選択肢3", "選択肢4"],
-    "correctAnswer": 0
+    "correctAnswer": 0,
+    "explanation": "正解の理由。各誤答がなぜ誤りか。",
+    "cognitiveLevel": "understand",
+    "difficulty": 2
   },
   {
-    "type": "fillblank", 
+    "type": "fillblank",
     "question": "____に入る語句は何ですか？",
-    "correctAnswer": "正解の語句"
+    "correctAnswer": "正解の語句",
+    "explanation": "なぜその語句が入るのかの理由。",
+    "cognitiveLevel": "recall",
+    "difficulty": 1
   }
 ]`;
 
@@ -1077,10 +1164,34 @@ JSONのみで回答してください（説明文は不要）:
                     return;
                 }
 
-                const prompt = `以下の授業メモから、15問の1問1答問題を作成してください。
-選択肢問題と穴埋め問題を半々程度で混在させてください。
-選択肢問題は4択で、1つの正解と3つの間違った選択肢を作成してください。
-穴埋め問題は重要なキーワードを答えとしてください。
+                const prompt = `あなたは認知科学に基づく学習教材の設計者です。
+以下の授業メモから、長期記憶への定着を最大化する一問一答を16問作成してください。
+目的は「単語の暗記」ではなく「検索練習による概念理解の強化」です。
+
+# 出題対象の選び方
+- メモの中の「核心概念・原理・因果関係」を優先し、瑣末な数値や固有名詞だけの暗記は避ける。
+- 1問につき1概念のみを問う（複数概念を1問に詰め込まない）。
+- メモに書かれている内容のみを根拠とし、推測で事実を補わない。
+
+# 問題形式の配分（合計16問）
+- 穴埋め（自力想起）: 8問
+- 4択（再認）: 8問
+- さらに16問中、最低4問は「理由・比較・適用」を問う問題にする
+  （例:「なぜAではなくBが起きるか」「AとBの違いは何か」「この原理が当てはまる例はどれか」）
+
+# 4択問題の誤答（ダミー選択肢）の品質ルール【最重要】
+- 誤答は「ありがちな誤解」「似て非なる概念」「文脈違い」に基づいて作る。
+- 4つの選択肢は長さ・粒度・文体をそろえ、正解だけが目立たないようにする。
+- 「すべて正しい」「上記のいずれでもない」は使わない。
+
+# 穴埋め問題のルール
+- 空欄は、その概念の意味を担う中心語句にする（助詞や一般語を抜かない）。
+- 空欄の語数や長さから答えが推測できないようにする。
+
+# 各問に必須のフィールド
+- explanation: 正解の理由を1〜2文で。4択の場合は「なぜ各誤答を選びがちか／なぜ誤りか」も簡潔に含める。
+- cognitiveLevel: "recall"（想起）/ "understand"（理解）/ "apply"（適用）のいずれか。
+- difficulty: 1（易）〜3（難）の整数。
 
 対象チャプター: ${chapterName}
 授業メモ:
@@ -1092,12 +1203,18 @@ ${memo}
     "type": "multiple",
     "question": "問題文",
     "options": ["選択肢1", "選択肢2", "選択肢3", "選択肢4"],
-    "correctAnswer": 0
+    "correctAnswer": 0,
+    "explanation": "正解の理由。各誤答がなぜ誤りか・選びやすいか。",
+    "cognitiveLevel": "understand",
+    "difficulty": 2
   },
   {
-    "type": "fillblank", 
+    "type": "fillblank",
     "question": "____に入る語句は何ですか？",
-    "correctAnswer": "正解の語句"
+    "correctAnswer": "正解の語句",
+    "explanation": "なぜその語句が入るのかの理由。",
+    "cognitiveLevel": "recall",
+    "difficulty": 1
   }
 ]`;
 
@@ -1160,6 +1277,11 @@ ${memo}
                         if (q.type === 'fillblank' && !q.correctAnswer) {
                             throw new Error('穴埋め問題にはcorrectAnswerが必要です');
                         }
+                        // 学習効果用の追加フィールドを正規化（無ければ既定値）
+                        q.explanation = (typeof q.explanation === 'string') ? q.explanation : '';
+                        q.cognitiveLevel = ['recall', 'understand', 'apply'].includes(q.cognitiveLevel)
+                            ? q.cognitiveLevel : 'recall';
+                        q.difficulty = [1, 2, 3].includes(q.difficulty) ? q.difficulty : 1;
                     }
 
                     this.saveChapterData(chapterName, questions).then((result) => {
@@ -1204,15 +1326,32 @@ ${memo}
                 document.getElementById('question-text').textContent = 
                     `問題 ${this.currentQuestionIndex + 1}/${this.questions.length}${chapterInfo}: ${question.question}`;
 
+                // 認知レベル・難易度のバッジ表示（旧データで欠けていても安全）
+                const metaEl = document.getElementById('question-meta');
+                const levelLabels = { recall: '想起', understand: '理解', apply: '適用' };
+                const diffLabels = { 1: '易', 2: '中', 3: '難' };
+                const badges = [];
+                if (question.cognitiveLevel && levelLabels[question.cognitiveLevel]) {
+                    badges.push(`<span class="meta-badge">${levelLabels[question.cognitiveLevel]}</span>`);
+                }
+                if (question.difficulty && diffLabels[question.difficulty]) {
+                    badges.push(`<span class="meta-badge">難易度: ${diffLabels[question.difficulty]}</span>`);
+                }
+                metaEl.innerHTML = badges.join('');
+
                 const optionsContainer = document.getElementById('options-container');
                 const fillBlankInput = document.getElementById('fill-blank-input');
                 const submitBtn = document.getElementById('submit-answer');
                 const nextBtn = document.getElementById('next-question');
+                const feedbackBox = document.getElementById('feedback-box');
 
                 optionsContainer.innerHTML = '';
                 fillBlankInput.classList.add('hidden');
                 submitBtn.classList.add('hidden');
                 nextBtn.classList.add('hidden');
+                feedbackBox.classList.add('hidden');
+                feedbackBox.classList.remove('correct', 'incorrect');
+                feedbackBox.innerHTML = '';
                 this.isAnswered = false;
 
                 if (question.type === 'multiple') {
@@ -1226,6 +1365,7 @@ ${memo}
                 } else if (question.type === 'fillblank') {
                     fillBlankInput.classList.remove('hidden');
                     fillBlankInput.value = '';
+                    fillBlankInput.removeAttribute('disabled');
                     submitBtn.classList.remove('hidden');
                 }
             }
@@ -1249,6 +1389,7 @@ ${memo}
 
                 this.totalQuestions++;
                 this.isAnswered = true;
+                this.showFeedback(question, correct);
                 await this.updateChapterScore(question.chapter, correct);
                 this.updateUI();
                 document.getElementById('next-question').classList.remove('hidden');
@@ -1266,19 +1407,49 @@ ${memo}
 
                 const correct = userAnswer.toLowerCase() === question.correctAnswer.toLowerCase();
                 if (correct) {
-                    alert('正解！');
                     this.score++;
-                } else {
-                    alert(`不正解。正解は「${question.correctAnswer}」です。`);
                 }
 
                 this.totalQuestions++;
                 this.isAnswered = true;
+                this.showFeedback(question, correct, userAnswer);
                 await this.updateChapterScore(question.chapter, correct);
                 this.updateUI();
 
+                document.getElementById('fill-blank-input').setAttribute('disabled', 'true');
                 document.getElementById('submit-answer').classList.add('hidden');
                 document.getElementById('next-question').classList.remove('hidden');
+            }
+
+            // 正誤判定後に「正誤・正解・解説」をインライン表示する（学習効果の中核）
+            showFeedback(question, correct, userAnswer) {
+                const box = document.getElementById('feedback-box');
+                box.classList.remove('hidden', 'correct', 'incorrect');
+                box.classList.add(correct ? 'correct' : 'incorrect');
+
+                let correctText = '';
+                if (question.type === 'fillblank') {
+                    correctText = question.correctAnswer;
+                } else if (question.type === 'multiple' && Array.isArray(question.options)) {
+                    correctText = question.options[question.correctAnswer];
+                }
+
+                const parts = [];
+                parts.push(`<div class="feedback-verdict">${correct ? '正解' : '不正解'}</div>`);
+                if (!correct && correctText) {
+                    parts.push(`<div class="feedback-answer">正解: ${this.escapeHtml(correctText)}</div>`);
+                }
+                if (question.explanation) {
+                    parts.push(`<div class="feedback-explanation">${this.escapeHtml(question.explanation)}</div>`);
+                }
+                box.innerHTML = parts.join('');
+            }
+
+            escapeHtml(str) {
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
             }
 
             async updateChapterScore(chapter, isCorrect) {
