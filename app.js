@@ -764,8 +764,9 @@ ${memo}
         }
         const question = this.questions[this.currentQuestionIndex];
         const chapterInfo = question.chapter ? ` (チャプター ${question.chapter})` : '';
-        document.getElementById('question-text').textContent =
-            `問題 ${this.currentQuestionIndex + 1}/${this.questions.length}${chapterInfo}: ${question.question}`;
+        const questionEl = document.getElementById('question-text');
+        questionEl.innerHTML =
+            `問題 ${this.currentQuestionIndex + 1}/${this.questions.length}${chapterInfo}: ${this.renderMath(question.question)}`;
 
         const metaEl = document.getElementById('question-meta');
         const levelLabels = { recall: '想起', understand: '理解', apply: '適用' };
@@ -798,7 +799,7 @@ ${memo}
             question.options.forEach((option, index) => {
                 const btn = document.createElement('button');
                 btn.className = 'option-btn';
-                btn.textContent = option;
+                btn.innerHTML = this.renderMath(option);
                 btn.addEventListener('click', () => this.selectOption(index, btn));
                 optionsContainer.appendChild(btn);
             });
@@ -876,10 +877,10 @@ ${memo}
         const parts = [];
         parts.push(`<div class="feedback-verdict">${correct ? '正解' : '不正解'}</div>`);
         if (!correct && correctText) {
-            parts.push(`<div class="feedback-answer">正解: ${this.escapeHtml(correctText)}</div>`);
+            parts.push(`<div class="feedback-answer">正解: ${this.renderMath(correctText)}</div>`);
         }
         if (question.explanation) {
-            parts.push(`<div class="feedback-explanation">${this.escapeHtml(question.explanation)}</div>`);
+            parts.push(`<div class="feedback-explanation">${this.renderMath(question.explanation)}</div>`);
         }
         box.innerHTML = parts.join('');
     }
@@ -889,6 +890,22 @@ ${memo}
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
+    }
+
+    // $...$ で囲まれた部分をKaTeXでレンダリングし、それ以外はescapeHtmlで処理する
+    renderMath(str) {
+        const parts = String(str).split(/(\$[^$]+\$)/g);
+        return parts.map(part => {
+            if (part.startsWith('$') && part.endsWith('$')) {
+                const latex = part.slice(1, -1);
+                try {
+                    return katex.renderToString(latex, { throwOnError: false });
+                } catch (e) {
+                    return this.escapeHtml(part);
+                }
+            }
+            return this.escapeHtml(part);
+        }).join('');
     }
 
     async updateChapterScore(chapter, isCorrect) {
