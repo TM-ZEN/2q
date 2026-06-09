@@ -201,7 +201,9 @@ class StudyApp {
         chapterSection.classList.remove('hidden');
         chapterSelector.innerHTML = '';
 
-        chapters.forEach(chapterData => {
+        [...chapters]
+            .sort((a, b) => String(a.chapter).localeCompare(String(b.chapter), 'ja', { numeric: true }))
+            .forEach(chapterData => {
             const btn = document.createElement('button');
             btn.className = 'chapter-btn';
             btn.dataset.chapter = chapterData.chapter;
