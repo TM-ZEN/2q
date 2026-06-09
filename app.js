@@ -774,6 +774,7 @@ ${memo}
             this.endQuiz();
             return;
         }
+        
         const question = this.questions[this.currentQuestionIndex];
         const questionEl = document.getElementById('question-text');
         questionEl.innerHTML =
@@ -783,8 +784,8 @@ ${memo}
         const levelLabels = { recall: '想起', understand: '理解', apply: '適用' };
         const diffLabels = { 1: '易', 2: '中', 3: '難' };
         const badges = [];
-        if (question.chapter && this.selectedChapters.length > 1) {
-            badges.push(`<span class="meta-badge">Ch.${question.chapter}</span>`);
+        if (this.selectedChapters.length > 0) {
+            badges.push(`<span class="meta-badge">チャプター ${this.selectedChapters.join('・')}</span>`);
         }
         if (question.cognitiveLevel && levelLabels[question.cognitiveLevel]) {
             badges.push(`<span class="meta-badge">${levelLabels[question.cognitiveLevel]}</span>`);
